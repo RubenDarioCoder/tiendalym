@@ -1,23 +1,37 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// 🔍 Imprimir TODAS las variables de entorno (para depurar)
-console.log('=== VARIABLES DE ENTORNO (solo las que empiezan con MYSQL) ===');
-Object.keys(process.env).forEach(key => {
-    if (key.startsWith('MYSQL')) {
-        console.log(`${key}=${process.env[key]}`);
-    }
-});
-console.log('===================================================');
+// 📌 Intentar obtener la URL de conexión desde variables de entorno
+let mysqlUrl = process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL;
 
-// 👇 Usar MYSQL_URL si existe, si no, fallback a localhost
-let pool;
-if (process.env.MYSQL_URL) {
-    console.log('✅ Usando MYSQL_URL para conectar');
-    pool = mysql.createPool({ uri: process.env.MYSQL_URL });
+// 🔧 Si la URL pública no tiene host (caso típico en Railway), agregarlo
+if (mysqlUrl && mysqlUrl.startsWith('mysql://root:@:/')) {
+    // Reemplazar con el host interno
+    mysqlUrl = 'mysql://root:CIIJnWTbHPFTDgPvMwmACkKKdJsVGVpf@mysql.railway.internal:3306/railway';
+    console.log('⚠️ URL pública sin host, usando host interno');
+}
+
+if (mysqlUrl) {
+    console.log('✅ Conectando a MySQL mediante URL (Railway)');
+    console.log(`🔗 URL: ${mysqlUrl.replace(/:[^:]*@/, ':****@')}`); // Ocultar contraseña
+    const pool = mysql.createPool({ uri: mysqlUrl });
+    
+    async function testConnection() {
+        try {
+            const connection = await pool.getConnection();
+            console.log('✅ Conectado a MySQL correctamente');
+            connection.release();
+            return true;
+        } catch (error) {
+            console.error('❌ Error conectando a MySQL:', error.message);
+            return false;
+        }
+    }
+    
+    module.exports = { pool, testConnection };
 } else {
-    console.log('⚠️ MYSQL_URL NO ENCONTRADO. Usando variables individuales (LOCAL)');
-    pool = mysql.createPool({
+    console.log('⚠️ No se encontró MYSQL_URL. Usando variables individuales (LOCAL)');
+    const pool = mysql.createPool({
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
@@ -28,19 +42,18 @@ if (process.env.MYSQL_URL) {
         queueLimit: 0,
         charset: 'utf8mb4'
     });
-}
-
-async function testConnection() {
-    try {
-        const connection = await pool.getConnection();
-        console.log('✅ Conectado a MySQL correctamente');
-        connection.release();
-        return true;
-    } catch (error) {
-        console.error('❌ Error conectando a MySQL:', error.message);
-        console.error('Detalles:', error);
-        return false;
+    
+    async function testConnection() {
+        try {
+            const connection = await pool.getConnection();
+            console.log('✅ Conectado a MySQL localmente');
+            connection.release();
+            return true;
+        } catch (error) {
+            console.error('❌ Error conectando a MySQL local:', error.message);
+            return false;
+        }
     }
+    
+    module.exports = { pool, testConnection };
 }
-
-module.exports = { pool, testConnection };
