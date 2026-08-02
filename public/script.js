@@ -9,6 +9,7 @@ const WHATSAPP_NUMBER = '5491144701604';
 // ESTADO GLOBAL
 // ============================================
 let productos = [];
+let sesionActiva = false;  // debe estar al principio, antes de cualquier función
 let jwtToken = null;
 let tokenUrlValido = false;
 let editandoIndex = -1;
