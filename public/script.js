@@ -792,19 +792,29 @@ function agregarUrlsDesdeInput() {
 // BOTÓN ADMIN
 // ============================================
 function mostrarBotonAdmin() {
-  if (document.getElementById('btnAdmin')) return;
-  const btn = document.createElement('button');
-  btn.id = 'btnAdmin';
-  btn.className = 'btn-admin';
-  btn.textContent = jwtToken ? 'Panel Admin' : '🔐 Acceso Admin';
-  btn.addEventListener('click', () => {
-    if (jwtToken) {
-      abrirAdmin();
-    } else {
-      abrirLogin();
+    // Asegurarse de que sesionActiva esté definida (por si acaso)
+    if (typeof sesionActiva === 'undefined') {
+        sesionActiva = false;
     }
-  });
-  adminButtonContainer.appendChild(btn);
+    
+    if (document.getElementById('btnAdmin')) return;
+    const btn = document.createElement('button');
+    btn.id = 'btnAdmin';
+    btn.className = 'btn-admin';
+    btn.textContent = sesionActiva ? 'Panel Admin' : '🔐 Acceso Admin';
+    btn.addEventListener('click', () => {
+        if (sesionActiva) {
+            abrirAdmin();
+        } else {
+            abrirLogin();
+        }
+    });
+    const container = document.getElementById('adminButtonContainer');
+    if (container) {
+        container.appendChild(btn);
+    } else {
+        console.warn('⚠️ No se encontró #adminButtonContainer');
+    }
 }
 
 function actualizarBotonAdmin() {
@@ -822,6 +832,22 @@ function ocultarBotonAdmin() {
 // ============================================
 // VERIFICAR TOKEN URL
 // ============================================
+
+async function validarTokenURL(token) {
+    try {
+        const res = await fetch(`/api/auth/validar-token?token=${encodeURIComponent(token)}`);
+        if (!res.ok) {
+            const error = await res.json();
+            console.warn('Token inválido:', error.error);
+            return false;
+        }
+        const data = await res.json();
+        return data.valido === true;
+    } catch (error) {
+        console.error('Error validando token:', error);
+        return false;
+    }
+} 
 async function verificarAccesoAdmin() {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get('token');
