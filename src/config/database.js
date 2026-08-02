@@ -1,35 +1,30 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// Función para obtener la configuración de conexión
-function getPoolConfig() {
-    // 1. Prioridad: MYSQL_URL (Railway)
-    if (process.env.MYSQL_URL) {
-        console.log('🔗 Conectando a MySQL mediante MYSQL_URL (Railway)');
-        return { uri: process.env.MYSQL_URL };
-    }
+// 🌐 PRIORIDAD: Si existe MYSQL_URL (Railway), la usa
+// 🔧 Si no, usa variables individuales (local)
+let poolConfig;
 
-    // 2. Prioridad: DATABASE_URL (alternativa en Railway)
-    if (process.env.DATABASE_URL) {
-        console.log('🔗 Conectando a MySQL mediante DATABASE_URL (Railway)');
-        return { uri: process.env.DATABASE_URL };
-    }
-
-    // 3. Prioridad: Variables individuales (local)
-    console.log('🔗 Conectando a MySQL con variables individuales (Local)');
-    return {
+if (process.env.MYSQL_URL) {
+    // Usar la URL completa de Railway
+    poolConfig = { uri: process.env.MYSQL_URL };
+    console.log('🔗 Conectando a MySQL mediante MYSQL_URL (Railway)');
+} else {
+    // Fallback a variables individuales (para desarrollo local)
+    poolConfig = {
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'LYM',
+        database: process.env.DB_NAME || 'tienda_ropa',
+        port: process.env.DB_PORT || 3306,
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
         charset: 'utf8mb4'
     };
+    console.log('🔗 Conectando a MySQL con variables individuales (Local)');
 }
 
-const poolConfig = getPoolConfig();
 const pool = mysql.createPool(poolConfig);
 
 async function testConnection() {
@@ -40,7 +35,7 @@ async function testConnection() {
         return true;
     } catch (error) {
         console.error('❌ Error conectando a MySQL:', error.message);
-        console.error('Detalles:', error);
+        if (error.code) console.error('Detalles:', error.code);
         return false;
     }
 }
