@@ -1,16 +1,23 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// Intentar usar MYSQL_URL de Railway, si existe
-let poolConfig;
-let connectionString = process.env.MYSQL_URL;
+// 🔍 Imprimir TODAS las variables de entorno (para depurar)
+console.log('=== VARIABLES DE ENTORNO (solo las que empiezan con MYSQL) ===');
+Object.keys(process.env).forEach(key => {
+    if (key.startsWith('MYSQL')) {
+        console.log(`${key}=${process.env[key]}`);
+    }
+});
+console.log('===================================================');
 
-if (connectionString) {
-    poolConfig = { uri: connectionString };
-    console.log('🔗 Conectando a MySQL usando MYSQL_URL (Railway)');
+// 👇 Usar MYSQL_URL si existe, si no, fallback a localhost
+let pool;
+if (process.env.MYSQL_URL) {
+    console.log('✅ Usando MYSQL_URL para conectar');
+    pool = mysql.createPool({ uri: process.env.MYSQL_URL });
 } else {
-    // Fallback a variables individuales (local)
-    poolConfig = {
+    console.log('⚠️ MYSQL_URL NO ENCONTRADO. Usando variables individuales (LOCAL)');
+    pool = mysql.createPool({
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
@@ -20,11 +27,8 @@ if (connectionString) {
         connectionLimit: 10,
         queueLimit: 0,
         charset: 'utf8mb4'
-    };
-    console.log('🔗 Conectando a MySQL con variables individuales (Local)');
+    });
 }
-
-const pool = mysql.createPool(poolConfig);
 
 async function testConnection() {
     try {
