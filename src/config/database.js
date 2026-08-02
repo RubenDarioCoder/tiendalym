@@ -1,28 +1,21 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
+// Configuración para Railway (usa MYSQL_URL) o local
 let poolConfig;
 
+// Si existe MYSQL_URL (Railway la inyecta), usarla
 if (process.env.MYSQL_URL) {
-    // Modo Railway: usar la URL completa
     console.log('🔗 Conectando a MySQL mediante MYSQL_URL (Railway)');
-    poolConfig = {
-        uri: process.env.MYSQL_URL,
-        connectionLimit: 5,
-        waitForConnections: true,
-        queueLimit: 0,
-        ssl: {
-            rejectUnauthorized: false
-        }
-    };
+    poolConfig = { uri: process.env.MYSQL_URL };
 } else {
-    // Modo local: usar variables individuales
+    // Modo local
     console.log('🔗 Conectando a MySQL con variables individuales (Local)');
     poolConfig = {
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'tienda_ropa',
+        database: process.env.DB_NAME || 'LYM',
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
@@ -40,7 +33,11 @@ async function testConnection() {
         return true;
     } catch (error) {
         console.error('❌ Error conectando a MySQL:', error.message);
-        console.error('Detalles:', error.stack);
+        if (error.code) console.error('Código de error:', error.code);
+        if (error.syscall) console.error('Syscall:', error.syscall);
+        if (error.address) console.error('Dirección:', error.address);
+        if (error.port) console.error('Puerto:', error.port);
+        console.error('Detalles completos:', error);
         return false;
     }
 }
