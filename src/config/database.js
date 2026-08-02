@@ -21,7 +21,7 @@ function getPoolConfig() {
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'tienda_ropa',
+        database: process.env.DB_NAME || 'LYM',
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
