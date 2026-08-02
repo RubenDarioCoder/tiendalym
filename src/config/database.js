@@ -1,17 +1,23 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// Configuración para Railway (usa MYSQL_URL) o local
-let poolConfig;
+// Función para obtener la configuración de conexión
+function getPoolConfig() {
+    // 1. Prioridad: MYSQL_URL (Railway)
+    if (process.env.MYSQL_URL) {
+        console.log('🔗 Conectando a MySQL mediante MYSQL_URL (Railway)');
+        return { uri: process.env.MYSQL_URL };
+    }
 
-// Si existe MYSQL_URL (Railway la inyecta), usarla
-if (process.env.MYSQL_URL) {
-    console.log('🔗 Conectando a MySQL mediante MYSQL_URL (Railway)');
-    poolConfig = { uri: process.env.MYSQL_URL };
-} else {
-    // Modo local
+    // 2. Prioridad: DATABASE_URL (alternativa en Railway)
+    if (process.env.DATABASE_URL) {
+        console.log('🔗 Conectando a MySQL mediante DATABASE_URL (Railway)');
+        return { uri: process.env.DATABASE_URL };
+    }
+
+    // 3. Prioridad: Variables individuales (local)
     console.log('🔗 Conectando a MySQL con variables individuales (Local)');
-    poolConfig = {
+    return {
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
@@ -23,6 +29,7 @@ if (process.env.MYSQL_URL) {
     };
 }
 
+const poolConfig = getPoolConfig();
 const pool = mysql.createPool(poolConfig);
 
 async function testConnection() {
@@ -33,11 +40,7 @@ async function testConnection() {
         return true;
     } catch (error) {
         console.error('❌ Error conectando a MySQL:', error.message);
-        if (error.code) console.error('Código de error:', error.code);
-        if (error.syscall) console.error('Syscall:', error.syscall);
-        if (error.address) console.error('Dirección:', error.address);
-        if (error.port) console.error('Puerto:', error.port);
-        console.error('Detalles completos:', error);
+        console.error('Detalles:', error);
         return false;
     }
 }
