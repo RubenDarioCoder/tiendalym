@@ -10,19 +10,51 @@
 
   <!-- ===== BARRA DE NAVEGACIÓN ===== -->
   <header class="navbar">
-  <span class="brand" id="brandTitle">✨ MODA URBANA</span>
-  <div id="adminButtonContainer"></div>
-</header>
+    <span class="brand" id="brandTitle">✨ MODA URBANA</span>
+    <div style="display: flex; align-items: center; gap: 0.8rem;">
+      <button id="cartToggle" class="cart-toggle" aria-label="Abrir carrito">
+        🛒 <span id="cartCount" class="cart-badge">0</span>
+      </button>
+      <div id="adminButtonContainer"></div>
+    </div>
+  </header>
 
-  <!-- ===== FILTROS DEL CATÁLOGO ===== -->
+  <!-- ===== FILTROS ===== -->
   <div class="filters" id="filterContainer">
     <button class="filter-btn active" data-filter="all">Todos</button>
   </div>
 
-  <!-- ===== CONTENEDOR DEL CATÁLOGO ===== -->
+  <!-- ===== CATÁLOGO ===== -->
   <main class="catalog" id="catalogContainer"></main>
 
-  <!-- ===== MODAL DE LOGIN ===== -->
+  <!-- ===== CARRITO LATERAL ===== -->
+  <div id="cartOverlay" class="cart-overlay"></div>
+  <aside id="cartSidebar" class="cart-sidebar">
+    <div class="cart-header">
+      <h2>🛒 Tu Carrito</h2>
+      <button id="cartClose" class="cart-close">&times;</button>
+    </div>
+    <div id="cartItems" class="cart-items">
+      <p class="cart-empty">El carrito está vacío.</p>
+    </div>
+    <div class="cart-footer">
+      <div class="cart-total">
+        <span>Total:</span>
+        <span id="cartTotalPrice">$0.00</span>
+      </div>
+      <button id="cartWhatsApp" class="btn-primary cart-send">
+        Enviar por WhatsApp
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== LIGHTBOX ===== -->
+  <div id="imageLightbox" class="lightbox-overlay">
+    <span class="lightbox-close">&times;</span>
+    <img class="lightbox-image" id="lightboxImg" src="" alt="Ampliar imagen">
+  </div>
+
+  <!-- ===== MODALES ADMIN ===== -->
   <div id="loginModal" class="modal-overlay">
     <div class="modal-card">
       <button class="modal-close" id="loginClose">&times;</button>
@@ -42,7 +74,6 @@
     </div>
   </div>
 
-  <!-- ===== MODAL DE ADMIN (CRUD) ===== -->
   <div id="adminModal" class="modal-overlay">
     <div class="modal-card wide">
       <button class="modal-close" id="adminClose">&times;</button>
@@ -68,14 +99,12 @@
           <label for="prodDesc">Descripción</label>
           <textarea id="prodDesc" rows="2" placeholder="Breve descripción de la prenda..."></textarea>
         </div>
-
         <div class="form-group">
           <label for="prodColors">Colores disponibles</label>
           <input type="text" id="prodColors" placeholder="Ej: Negro, Blanco, Rojo (separados por coma)" list="colorList">
           <datalist id="colorList"></datalist>
           <small>Ingresa los colores separados por coma.</small>
         </div>
-
         <div class="form-group">
           <label>Imágenes</label>
           <div class="image-input-group">
@@ -86,14 +115,12 @@
           <div id="imagePreviewContainer" class="image-preview-grid"></div>
           <small>Las imágenes se agregan automáticamente al seleccionar archivos o al escribir URLs y presionar Enter.</small>
         </div>
-
         <div class="form-group form-check">
           <label>
             <input type="checkbox" id="prodVisible" checked>
             Producto visible en el catálogo
           </label>
         </div>
-
         <div class="form-actions">
           <button type="submit" class="btn-primary" id="saveProductBtn">Guardar Producto</button>
           <button type="reset" class="btn-secondary" id="cancelEditBtn">Cancelar Edición</button>
@@ -108,7 +135,7 @@
         <div id="adminProductList"></div>
       </div>
 
-      <button id="resetDataBtn" class="btn-danger" style="margin-top:0.5rem; width:100%;">Resetear datos (borrar localStorage)</button>
+      <button id="resetDataBtn" class="btn-danger" style="margin-top:0.5rem; width:100%;">Resetear datos</button>
       <button id="logoutBtn" class="btn-danger" style="margin-top:0.5rem; width:100%;">Cerrar Sesión</button>
     </div>
   </div>
