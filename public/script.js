@@ -1,28 +1,22 @@
-/**
- * ========================================
- *  CATÁLOGO DE ROPA – CON MYSQL + JWT
- *  Autenticación con token en URL
- *  y JWT para operaciones protegidas
- * ========================================
- */
-
 // ============================================
 // CONFIGURACIÓN
 // ============================================
 const API_URL = '/api/productos';
 const AUTH_URL = '/api/auth';
+const WHATSAPP_NUMBER = '5491144701604';
 
 // ============================================
 // ESTADO GLOBAL
 // ============================================
 let productos = [];
-let jwtToken = null;               // Token JWT (se guarda en memoria)
-let tokenUrlValido = false;        // Indica si el token de URL es válido
+let jwtToken = null;
+let tokenUrlValido = false;
 let editandoIndex = -1;
 let filtroCategoria = 'all';
 let paginaActual = 1;
 let totalPaginas = 1;
 let currentImages = [];
+let carrito = [];
 
 // ============================================
 // REFERENCIAS DOM
@@ -56,8 +50,187 @@ const prodVisible = document.getElementById('prodVisible');
 const categoryList = document.getElementById('categoryList');
 const colorList = document.getElementById('colorList');
 
+// Carrito
+const cartToggle = document.getElementById('cartToggle');
+const cartClose = document.getElementById('cartClose');
+const cartOverlay = document.getElementById('cartOverlay');
+const cartSidebar = document.getElementById('cartSidebar');
+const cartItems = document.getElementById('cartItems');
+const cartTotalPrice = document.getElementById('cartTotalPrice');
+const cartCount = document.getElementById('cartCount');
+const cartWhatsApp = document.getElementById('cartWhatsApp');
+
+// Lightbox
+const lightbox = document.getElementById('imageLightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+const lightboxClose = document.querySelector('.lightbox-close');
+
 // ============================================
-// FUNCIONES DE NORMALIZACIÓN
+// FUNCIONES DE CARRITO
+// ============================================
+function cargarCarrito() {
+  const stored = localStorage.getItem('carrito');
+  if (stored) {
+    try {
+      carrito = JSON.parse(stored);
+    } catch (e) {
+      carrito = [];
+    }
+  } else {
+    carrito = [];
+  }
+  actualizarContadorCarrito();
+}
+
+function guardarCarrito() {
+  localStorage.setItem('carrito', JSON.stringify(carrito));
+  actualizarContadorCarrito();
+}
+
+function actualizarContadorCarrito() {
+  const total = carrito.reduce((sum, item) => sum + item.cantidad, 0);
+  cartCount.textContent = total;
+}
+
+function agregarAlCarrito(productoId) {
+  const prod = productos.find(p => p.id == productoId);
+  if (!prod) return;
+
+  const existe = carrito.find(item => item.id == productoId);
+  if (existe) {
+    existe.cantidad += 1;
+  } else {
+    carrito.push({
+      id: prod.id,
+      name: prod.name,
+      price: prod.price,
+      cantidad: 1,
+      image: (prod.images && prod.images.length > 0) ? prod.images[0] : ''
+    });
+  }
+  guardarCarrito();
+  renderizarCarrito();
+  abrirCarrito();
+  const btn = document.querySelector(`.btn-add-cart[data-id="${productoId}"]`);
+  if (btn) {
+    btn.textContent = '✓ Agregado';
+    btn.classList.add('added');
+    setTimeout(() => {
+      btn.textContent = '🛒 Agregar al carrito';
+      btn.classList.remove('added');
+    }, 2000);
+  }
+}
+
+function quitarDelCarrito(productoId) {
+  const idx = carrito.findIndex(item => item.id == productoId);
+  if (idx !== -1) {
+    if (carrito[idx].cantidad > 1) {
+      carrito[idx].cantidad -= 1;
+    } else {
+      carrito.splice(idx, 1);
+    }
+    guardarCarrito();
+    renderizarCarrito();
+  }
+}
+
+function eliminarItemCarrito(productoId) {
+  const idx = carrito.findIndex(item => item.id == productoId);
+  if (idx !== -1) {
+    carrito.splice(idx, 1);
+    guardarCarrito();
+    renderizarCarrito();
+  }
+}
+
+function abrirCarrito() {
+  cartOverlay.classList.add('active');
+  cartSidebar.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarCarrito() {
+  cartOverlay.classList.remove('active');
+  cartSidebar.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function renderizarCarrito() {
+  if (carrito.length === 0) {
+    cartItems.innerHTML = `<p class="cart-empty">El carrito está vacío.</p>`;
+    cartTotalPrice.textContent = '$0.00';
+    return;
+  }
+
+  let html = '';
+  let total = 0;
+  carrito.forEach(item => {
+    const subtotal = item.price * item.cantidad;
+    total += subtotal;
+    html += `
+      <div class="cart-item" data-id="${item.id}">
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-price">$${item.price.toFixed(2)} c/u</div>
+        </div>
+        <div class="item-qty">
+          <button class="qty-btn" data-action="minus" data-id="${item.id}">−</button>
+          <span>${item.cantidad}</span>
+          <button class="qty-btn" data-action="plus" data-id="${item.id}">+</button>
+        </div>
+        <button class="item-remove" data-id="${item.id}">✕</button>
+      </div>
+    `;
+  });
+
+  cartItems.innerHTML = html;
+  cartTotalPrice.textContent = `$${total.toFixed(2)}`;
+
+  cartItems.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const id = parseInt(this.dataset.id);
+      const action = this.dataset.action;
+      if (action === 'plus') {
+        agregarAlCarrito(id);
+      } else {
+        quitarDelCarrito(id);
+      }
+    });
+  });
+
+  cartItems.querySelectorAll('.item-remove').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const id = parseInt(this.dataset.id);
+      eliminarItemCarrito(id);
+    });
+  });
+}
+
+function generarMensajeWhatsApp() {
+  if (carrito.length === 0) {
+    alert('El carrito está vacío. Agrega productos primero.');
+    return;
+  }
+
+  let mensaje = '¡Hola! Me interesan estos productos:\n\n';
+  let total = 0;
+  carrito.forEach(item => {
+    const subtotal = item.price * item.cantidad;
+    total += subtotal;
+    mensaje += `• ${item.name} x ${item.cantidad} = $${subtotal.toFixed(2)}\n`;
+  });
+  mensaje += `\nTotal: $${total.toFixed(2)}`;
+  mensaje += `\n\n¡Gracias!`;
+
+  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, '_blank');
+}
+
+// ============================================
+// NORMALIZACIÓN Y API
 // ============================================
 function normalizarProducto(prod) {
   if (!prod.images || !Array.isArray(prod.images)) {
@@ -72,9 +245,6 @@ function normalizarProducto(prod) {
   return prod;
 }
 
-// ============================================
-// FUNCIONES DE API (con JWT)
-// ============================================
 async function cargarProductos(page = 1, filters = {}) {
   try {
     let url = `${API_URL}?page=${page}&limit=20`;
@@ -103,11 +273,9 @@ async function cargarProductos(page = 1, filters = {}) {
 async function guardarProductoAPI(producto, index) {
   try {
     const headers = { 'Content-Type': 'application/json' };
-    // Si hay JWT, lo añadimos al header
     if (jwtToken) {
       headers['Authorization'] = `Bearer ${jwtToken}`;
     }
-
     let res;
     if (index >= 0 && index < productos.length) {
       res = await fetch(`${API_URL}/${producto.id}`, {
@@ -122,7 +290,6 @@ async function guardarProductoAPI(producto, index) {
         body: JSON.stringify(producto)
       });
     }
-
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
         alert('Tu sesión ha expirado. Vuelve a iniciar sesión.');
@@ -145,7 +312,6 @@ async function eliminarProductoAPI(id, index) {
     if (jwtToken) {
       headers['Authorization'] = `Bearer ${jwtToken}`;
     }
-
     const res = await fetch(`${API_URL}/${id}`, {
       method: 'DELETE',
       headers
@@ -166,9 +332,6 @@ async function eliminarProductoAPI(id, index) {
   }
 }
 
-// ============================================
-// VALIDACIÓN DEL TOKEN DE URL
-// ============================================
 async function validarTokenURL(token) {
   try {
     const res = await fetch(`${AUTH_URL}/validar-token?token=${encodeURIComponent(token)}`);
@@ -185,9 +348,6 @@ async function validarTokenURL(token) {
   }
 }
 
-// ============================================
-// LOGIN (obtener JWT)
-// ============================================
 async function iniciarSesion(username, password) {
   try {
     const res = await fetch(`${AUTH_URL}/login`, {
@@ -195,14 +355,12 @@ async function iniciarSesion(username, password) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-
     if (!res.ok) {
       const error = await res.json();
       throw new Error(error.error || 'Credenciales inválidas');
     }
-
     const data = await res.json();
-    jwtToken = data.token; // Guardamos el JWT en memoria
+    jwtToken = data.token;
     return true;
   } catch (error) {
     console.error('Error en login:', error);
@@ -211,7 +369,7 @@ async function iniciarSesion(username, password) {
 }
 
 // ============================================
-// DATALISTS Y FILTROS (sin cambios)
+// DATALISTS Y FILTROS
 // ============================================
 function getCategoriasUnicas() {
   const cats = productos.map(p => p.category).filter(c => c && c.trim());
@@ -262,7 +420,7 @@ async function cargarPagina(page) {
 }
 
 // ============================================
-// RENDERIZADO DEL CATÁLOGO (sin cambios)
+// RENDERIZADO CATÁLOGO (con lightbox)
 // ============================================
 function renderizarCatalogo(conPaginacion = true) {
   if (!catalogContainer) return;
@@ -315,7 +473,7 @@ function renderizarCatalogo(conPaginacion = true) {
             <span class="price">$${Number(prod.price).toFixed(2)}</span>
             <span class="desc">${prod.description || ''}</span>
             ${colorsHtml}
-            <button class="btn-interest" data-id="${prod.id}">Me interesa</button>
+            <button class="btn-add-cart" data-id="${prod.id}">🛒 Agregar al carrito</button>
           </div>
         </div>
       `;
@@ -365,19 +523,29 @@ function renderizarCatalogo(conPaginacion = true) {
     });
   });
 
-  // Eventos "Me interesa"
-  document.querySelectorAll('.btn-interest').forEach(btn => {
+  // Eventos "Agregar al carrito"
+  document.querySelectorAll('.btn-add-cart').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
-      const id = this.dataset.id;
-      const producto = productos.find(p => p.id == id);
-      if (producto) alert(`¡Gracias por tu interés en "${producto.name}"!`);
+      const id = parseInt(this.dataset.id);
+      agregarAlCarrito(id);
+    });
+  });
+
+  // Evento lightbox en imágenes del carrusel
+  document.querySelectorAll('.carousel .slides img').forEach(img => {
+    img.style.cursor = 'pointer';
+    img.addEventListener('click', function(e) {
+      e.stopPropagation();
+      lightboxImg.src = this.src;
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
     });
   });
 }
 
 // ============================================
-// RENDER LISTA ADMIN (con JWT)
+// RENDER LISTA ADMIN
 // ============================================
 function renderizarListaAdmin() {
   if (!adminProductList) return;
@@ -431,7 +599,6 @@ function renderizarListaAdmin() {
     });
   });
 
-  // Doble clic para eliminar categoría/color (funciona igual)
   document.querySelectorAll('.admin-item .category-tag, .admin-item .color-tag').forEach(el => {
     el.addEventListener('dblclick', async function(e) {
       e.stopPropagation();
@@ -467,7 +634,7 @@ function renderizarListaAdmin() {
 }
 
 // ============================================
-// CRUD (con JWT)
+// CRUD
 // ============================================
 async function guardarProductoHandler(e) {
   e.preventDefault();
@@ -584,7 +751,7 @@ function resetFormulario() {
 }
 
 // ============================================
-// IMÁGENES (preview y automático)
+// IMÁGENES (preview)
 // ============================================
 function renderImagePreview() {
   imagePreviewContainer.innerHTML = '';
@@ -621,7 +788,7 @@ function agregarUrlsDesdeInput() {
 }
 
 // ============================================
-// BOTÓN ADMIN (basado en token de URL)
+// BOTÓN ADMIN
 // ============================================
 function mostrarBotonAdmin() {
   if (document.getElementById('btnAdmin')) return;
@@ -652,36 +819,31 @@ function ocultarBotonAdmin() {
 }
 
 // ============================================
-// VERIFICACIÓN DEL TOKEN DE URL
+// VERIFICAR TOKEN URL
 // ============================================
 async function verificarAccesoAdmin() {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get('token');
 
   if (!token) {
-    // No hay token en URL → sin acceso admin
     tokenUrlValido = false;
     return;
   }
 
-  // Validar el token con el backend
   const valido = await validarTokenURL(token);
   if (valido) {
     tokenUrlValido = true;
-    // Mostramos el botón de acceso (sin JWT aún)
     mostrarBotonAdmin();
   } else {
     tokenUrlValido = false;
-    // Opcional: mostrar un mensaje de error o eliminar el token de la URL
     alert('El enlace de acceso no es válido o ha expirado.');
-    // Limpiar la URL (eliminar el token)
     const nuevaUrl = window.location.pathname;
     window.history.replaceState({}, document.title, nuevaUrl);
   }
 }
 
 // ============================================
-// LOGIN / SESIÓN (con JWT)
+// LOGIN / SESIÓN
 // ============================================
 async function manejarLogin(e) {
   e.preventDefault();
@@ -701,11 +863,9 @@ async function manejarLogin(e) {
 
 function cerrarSesion() {
   if (confirm('¿Cerrar sesión de administrador?')) {
-    // Eliminar JWT de memoria
     jwtToken = null;
     tokenUrlValido = false;
 
-    // Eliminar el token de la URL (si existe)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('token')) {
       urlParams.delete('token');
@@ -713,12 +873,9 @@ function cerrarSesion() {
       window.history.replaceState({}, document.title, nuevaUrl);
     }
 
-    // Ocultar botón y cerrar modales
     ocultarBotonAdmin();
     cerrarAdmin();
     cerrarLogin();
-
-    // Recargar la página para limpiar estado
     window.location.reload();
   }
 }
@@ -750,7 +907,7 @@ function cerrarAdmin() {
 }
 
 // ============================================
-// RESET (opcional)
+// RESET
 // ============================================
 async function resetearDatos() {
   if (confirm('¿Borrar todos los productos?')) {
@@ -766,21 +923,32 @@ async function resetearDatos() {
 // INICIALIZACIÓN
 // ============================================
 async function init() {
-  // 1. Cargar productos públicos
+  cargarCarrito();
   await cargarProductos(1, { category: 'all', visible: true });
-
-  // 2. Verificar token en URL
   await verificarAccesoAdmin();
-
-  // 3. Actualizar filtros y renderizar catálogo
   await actualizarFiltros();
   renderizarCatalogo();
+  renderizarCarrito();
 
-  // ============================================
-  // EVENTOS
-  // ============================================
+  // Eventos carrito
+  cartToggle.addEventListener('click', abrirCarrito);
+  cartClose.addEventListener('click', cerrarCarrito);
+  cartOverlay.addEventListener('click', cerrarCarrito);
+  cartWhatsApp.addEventListener('click', generarMensajeWhatsApp);
 
-  // Login
+  // Eventos lightbox
+  lightbox.addEventListener('click', function(e) {
+    if (e.target === this || e.target === lightboxImg) {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  });
+  lightboxClose.addEventListener('click', function() {
+    lightbox.classList.remove('active');
+    document.body.style.overflow = '';
+  });
+
+  // Eventos admin
   loginClose.addEventListener('click', cerrarLogin);
   adminClose.addEventListener('click', cerrarAdmin);
   logoutBtn.addEventListener('click', cerrarSesion);
@@ -816,7 +984,6 @@ async function init() {
   });
   prodImageUrls.addEventListener('blur', agregarUrlsDesdeInput);
 
-  // Cerrar modales al hacer clic en overlay
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', function(e) {
       if (e.target === this) {
@@ -825,15 +992,6 @@ async function init() {
       }
     });
   });
-
-  // ============================================
-  // DOBLE CLIC ELIMINADO COMPLETAMENTE
-  // ============================================
-  // Ya no hay listener para doble clic en el logo.
-  // El único acceso es mediante el token en la URL.
 }
 
-// ============================================
-// INICIO
-// ============================================
 document.addEventListener('DOMContentLoaded', init);
