@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>Tienda · Catálogo de Ropa</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===== BARRA DE NAVEGACIÓN ===== -->
+  <header class="navbar">
+  <span class="brand" id="brandTitle">✨ MODA URBANA</span>
+  <div id="adminButtonContainer"></div>
+</header>
+
+  <!-- ===== FILTROS DEL CATÁLOGO ===== -->
+  <div class="filters" id="filterContainer">
+    <button class="filter-btn active" data-filter="all">Todos</button>
+  </div>
+
+  <!-- ===== CONTENEDOR DEL CATÁLOGO ===== -->
+  <main class="catalog" id="catalogContainer"></main>
+
+  <!-- ===== MODAL DE LOGIN ===== -->
+  <div id="loginModal" class="modal-overlay">
+    <div class="modal-card">
+      <button class="modal-close" id="loginClose">&times;</button>
+      <h2>Acceso Administrador</h2>
+      <form id="loginForm" autocomplete="off">
+        <div class="form-group">
+          <label for="loginUser">Usuario</label>
+          <input type="text" id="loginUser" placeholder="admin" autocomplete="off" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPass">Contraseña</label>
+          <input type="password" id="loginPass" placeholder="••••" autocomplete="new-password" required>
+        </div>
+        <button type="submit" class="btn-primary">Ingresar</button>
+        <div id="loginError" class="error-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== MODAL DE ADMIN (CRUD) ===== -->
+  <div id="adminModal" class="modal-overlay">
+    <div class="modal-card wide">
+      <button class="modal-close" id="adminClose">&times;</button>
+      <h2>Panel de Administración</h2>
+
+      <form id="productForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="prodName">Nombre</label>
+            <input type="text" id="prodName" placeholder="Ej: Remera Oversize" required>
+          </div>
+          <div class="form-group">
+            <label for="prodPrice">Precio ($)</label>
+            <input type="number" id="prodPrice" placeholder="0.00" step="0.01" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="prodCategory">Categoría</label>
+          <input type="text" id="prodCategory" placeholder="Ej: Remeras, Pantalones, etc." list="categoryList" required>
+          <datalist id="categoryList"></datalist>
+        </div>
+        <div class="form-group">
+          <label for="prodDesc">Descripción</label>
+          <textarea id="prodDesc" rows="2" placeholder="Breve descripción de la prenda..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="prodColors">Colores disponibles</label>
+          <input type="text" id="prodColors" placeholder="Ej: Negro, Blanco, Rojo (separados por coma)" list="colorList">
+          <datalist id="colorList"></datalist>
+          <small>Ingresa los colores separados por coma.</small>
+        </div>
+
+        <div class="form-group">
+          <label>Imágenes</label>
+          <div class="image-input-group">
+            <input type="text" id="prodImageUrls" placeholder="URLs separadas por coma (presiona Enter o pierde el foco)">
+            <span class="sep">o</span>
+            <input type="file" id="prodImageFiles" accept="image/*" multiple>
+          </div>
+          <div id="imagePreviewContainer" class="image-preview-grid"></div>
+          <small>Las imágenes se agregan automáticamente al seleccionar archivos o al escribir URLs y presionar Enter.</small>
+        </div>
+
+        <div class="form-group form-check">
+          <label>
+            <input type="checkbox" id="prodVisible" checked>
+            Producto visible en el catálogo
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" id="saveProductBtn">Guardar Producto</button>
+          <button type="reset" class="btn-secondary" id="cancelEditBtn">Cancelar Edición</button>
+        </div>
+        <input type="hidden" id="editIndex" value="-1">
+      </form>
+
+      <hr>
+
+      <div class="admin-list">
+        <h3>Productos existentes</h3>
+        <div id="adminProductList"></div>
+      </div>
+
+      <button id="resetDataBtn" class="btn-danger" style="margin-top:0.5rem; width:100%;">Resetear datos (borrar localStorage)</button>
+      <button id="logoutBtn" class="btn-danger" style="margin-top:0.5rem; width:100%;">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
