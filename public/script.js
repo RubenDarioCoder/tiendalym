@@ -94,33 +94,35 @@ function actualizarContadorCarrito() {
 }
 
 function agregarAlCarrito(productoId) {
-  const prod = productos.find(p => p.id == productoId);
-  if (!prod) return;
+    const prod = productos.find(p => p.id == productoId);
+    if (!prod) return;
 
-  const existe = carrito.find(item => item.id == productoId);
-  if (existe) {
-    existe.cantidad += 1;
-  } else {
-    carrito.push({
-      id: prod.id,
-      name: prod.name,
-      price: prod.price,
-      cantidad: 1,
-      image: (prod.images && prod.images.length > 0) ? prod.images[0] : ''
-    });
-  }
-  guardarCarrito();
-  renderizarCarrito();
-  abrirCarrito();
-  const btn = document.querySelector(`.btn-add-cart[data-id="${productoId}"]`);
-  if (btn) {
-    btn.textContent = '✓ Agregado';
-    btn.classList.add('added');
-    setTimeout(() => {
-      btn.textContent = '🛒 Agregar al carrito';
-      btn.classList.remove('added');
-    }, 2000);
-  }
+    const price = typeof prod.price === 'number' ? prod.price : parseFloat(prod.price) || 0;
+
+    const existe = carrito.find(item => item.id == productoId);
+    if (existe) {
+        existe.cantidad += 1;
+    } else {
+        carrito.push({
+            id: prod.id,
+            name: prod.name,
+            price: price,
+            cantidad: 1,
+            image: (prod.images && prod.images.length > 0) ? prod.images[0] : ''
+        });
+    }
+    guardarCarrito();
+    renderizarCarrito();
+    abrirCarrito();
+    const btn = document.querySelector(`.btn-add-cart[data-id="${productoId}"]`);
+    if (btn) {
+      btn.textContent = '✓ Agregado';
+      btn.classList.add('added');
+      setTimeout(() => {
+        btn.textContent = '🛒 Agregar al carrito';
+        btn.classList.remove('added');
+      }, 2000);
+    }
 }
 
 function quitarDelCarrito(productoId) {
@@ -792,29 +794,34 @@ function agregarUrlsDesdeInput() {
 // BOTÓN ADMIN
 // ============================================
 function mostrarBotonAdmin() {
-    // Asegurarse de que sesionActiva esté definida (por si acaso)
     if (typeof sesionActiva === 'undefined') {
         sesionActiva = false;
     }
-    
-    if (document.getElementById('btnAdmin')) return;
-    const btn = document.createElement('button');
-    btn.id = 'btnAdmin';
-    btn.className = 'btn-admin';
-    btn.textContent = sesionActiva ? 'Panel Admin' : '🔐 Acceso Admin';
-    btn.addEventListener('click', () => {
-        if (sesionActiva) {
-            abrirAdmin();
+
+    let btn = document.getElementById('btnAdmin');
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'btnAdmin';
+        btn.className = 'btn-admin';
+        btn.addEventListener('click', () => {
+            if (sesionActiva) {
+                abrirAdmin();
+            } else {
+                abrirLogin();
+            }
+        });
+        const container = document.getElementById('adminButtonContainer');
+        if (container) {
+            container.appendChild(btn);
         } else {
-            abrirLogin();
+            console.warn('⚠️ No se encontró #adminButtonContainer');
+            return;
         }
-    });
-    const container = document.getElementById('adminButtonContainer');
-    if (container) {
-        container.appendChild(btn);
-    } else {
-        console.warn('⚠️ No se encontró #adminButtonContainer');
     }
+    
+    // 👇 FORZAR VISIBILIDAD añadiendo la clase 'visible'
+    btn.classList.add('visible');
+    btn.textContent = sesionActiva ? 'Panel Admin' : '🔐 Acceso Admin';
 }
 
 function actualizarBotonAdmin() {
