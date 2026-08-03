@@ -9,7 +9,7 @@ const WHATSAPP_NUMBER = '5491144701604';
 // ESTADO GLOBAL
 // ============================================
 let productos = [];
-let sesionActiva = false;  // debe estar al principio, antes de cualquier función
+let sesionActiva = false;
 let jwtToken = null;
 let tokenUrlValido = false;
 let editandoIndex = -1;
@@ -67,19 +67,11 @@ const lightboxImg = document.getElementById('lightboxImg');
 const lightboxClose = document.querySelector('.lightbox-close');
 
 // ============================================
-// FUNCIONES DE CARRITO
+// CARRITO
 // ============================================
 function cargarCarrito() {
   const stored = localStorage.getItem('carrito');
-  if (stored) {
-    try {
-      carrito = JSON.parse(stored);
-    } catch (e) {
-      carrito = [];
-    }
-  } else {
-    carrito = [];
-  }
+  carrito = stored ? JSON.parse(stored) : [];
   actualizarContadorCarrito();
 }
 
@@ -94,35 +86,34 @@ function actualizarContadorCarrito() {
 }
 
 function agregarAlCarrito(productoId) {
-    const prod = productos.find(p => p.id == productoId);
-    if (!prod) return;
+  const prod = productos.find(p => p.id == productoId);
+  if (!prod) return;
+  const price = typeof prod.price === 'number' ? prod.price : parseFloat(prod.price) || 0;
 
-    const price = typeof prod.price === 'number' ? prod.price : parseFloat(prod.price) || 0;
-
-    const existe = carrito.find(item => item.id == productoId);
-    if (existe) {
-        existe.cantidad += 1;
-    } else {
-        carrito.push({
-            id: prod.id,
-            name: prod.name,
-            price: price,
-            cantidad: 1,
-            image: (prod.images && prod.images.length > 0) ? prod.images[0] : ''
-        });
-    }
-    guardarCarrito();
-    renderizarCarrito();
-    abrirCarrito();
-    const btn = document.querySelector(`.btn-add-cart[data-id="${productoId}"]`);
-    if (btn) {
-      btn.textContent = '✓ Agregado';
-      btn.classList.add('added');
-      setTimeout(() => {
-        btn.textContent = '🛒 Agregar al carrito';
-        btn.classList.remove('added');
-      }, 2000);
-    }
+  const existe = carrito.find(item => item.id == productoId);
+  if (existe) {
+    existe.cantidad += 1;
+  } else {
+    carrito.push({
+      id: prod.id,
+      name: prod.name,
+      price: price,
+      cantidad: 1,
+      image: prod.images?.[0] || ''
+    });
+  }
+  guardarCarrito();
+  renderizarCarrito();
+  abrirCarrito();
+  const btn = document.querySelector(`.btn-add-cart[data-id="${productoId}"]`);
+  if (btn) {
+    btn.textContent = '✓ Agregado';
+    btn.classList.add('added');
+    setTimeout(() => {
+      btn.textContent = '🛒 Agregar al carrito';
+      btn.classList.remove('added');
+    }, 2000);
+  }
 }
 
 function quitarDelCarrito(productoId) {
@@ -194,8 +185,7 @@ function renderizarCarrito() {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       const id = parseInt(this.dataset.id);
-      const action = this.dataset.action;
-      if (action === 'plus') {
+      if (this.dataset.action === 'plus') {
         agregarAlCarrito(id);
       } else {
         quitarDelCarrito(id);
@@ -214,10 +204,9 @@ function renderizarCarrito() {
 
 function generarMensajeWhatsApp() {
   if (carrito.length === 0) {
-    alert('El carrito está vacío. Agrega productos primero.');
+    alert('El carrito está vacío.');
     return;
   }
-
   let mensaje = '¡Hola! Me interesan estos productos:\n\n';
   let total = 0;
   carrito.forEach(item => {
@@ -225,15 +214,12 @@ function generarMensajeWhatsApp() {
     total += subtotal;
     mensaje += `• ${item.name} x ${item.cantidad} = $${subtotal.toFixed(2)}\n`;
   });
-  mensaje += `\nTotal: $${total.toFixed(2)}`;
-  mensaje += `\n\n¡Gracias!`;
-
-  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, '_blank');
+  mensaje += `\nTotal: $${total.toFixed(2)}\n\n¡Gracias!`;
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
 
 // ============================================
-// NORMALIZACIÓN Y API
+// API
 // ============================================
 function normalizarProducto(prod) {
   if (!prod.images || !Array.isArray(prod.images)) {
@@ -251,15 +237,9 @@ function normalizarProducto(prod) {
 async function cargarProductos(page = 1, filters = {}) {
   try {
     let url = `${API_URL}?page=${page}&limit=20`;
-    if (filters.category && filters.category !== 'all') {
-      url += `&category=${encodeURIComponent(filters.category)}`;
-    }
-    if (filters.search) {
-      url += `&search=${encodeURIComponent(filters.search)}`;
-    }
-    if (filters.visible !== undefined) {
-      url += `&visible=${filters.visible}`;
-    }
+    if (filters.category && filters.category !== 'all') url += `&category=${encodeURIComponent(filters.category)}`;
+    if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
+    if (filters.visible !== undefined) url += `&visible=${filters.visible}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('Error al cargar productos');
     const data = await res.json();
@@ -276,22 +256,12 @@ async function cargarProductos(page = 1, filters = {}) {
 async function guardarProductoAPI(producto, index) {
   try {
     const headers = { 'Content-Type': 'application/json' };
-    if (jwtToken) {
-      headers['Authorization'] = `Bearer ${jwtToken}`;
-    }
+    if (jwtToken) headers['Authorization'] = `Bearer ${jwtToken}`;
     let res;
     if (index >= 0 && index < productos.length) {
-      res = await fetch(`${API_URL}/${producto.id}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(producto)
-      });
+      res = await fetch(`${API_URL}/${producto.id}`, { method: 'PUT', headers, body: JSON.stringify(producto) });
     } else {
-      res = await fetch(API_URL, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(producto)
-      });
+      res = await fetch(API_URL, { method: 'POST', headers, body: JSON.stringify(producto) });
     }
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
@@ -312,13 +282,8 @@ async function guardarProductoAPI(producto, index) {
 async function eliminarProductoAPI(id, index) {
   try {
     const headers = {};
-    if (jwtToken) {
-      headers['Authorization'] = `Bearer ${jwtToken}`;
-    }
-    const res = await fetch(`${API_URL}/${id}`, {
-      method: 'DELETE',
-      headers
-    });
+    if (jwtToken) headers['Authorization'] = `Bearer ${jwtToken}`;
+    const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE', headers });
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
         alert('Tu sesión ha expirado. Vuelve a iniciar sesión.');
@@ -364,6 +329,7 @@ async function iniciarSesion(username, password) {
     }
     const data = await res.json();
     jwtToken = data.token;
+    console.log('✅ JWT Token obtenido:', jwtToken ? 'OK' : 'VACÍO');
     return true;
   } catch (error) {
     console.error('Error en login:', error);
@@ -375,15 +341,11 @@ async function iniciarSesion(username, password) {
 // DATALISTS Y FILTROS
 // ============================================
 function getCategoriasUnicas() {
-  const cats = productos.map(p => p.category).filter(c => c && c.trim());
-  return [...new Set(cats)].sort();
+  return [...new Set(productos.map(p => p.category).filter(c => c && c.trim()))].sort();
 }
 
 function getColoresUnicos() {
-  const todos = productos.flatMap(p => {
-    if (!p.colors || !Array.isArray(p.colors)) return [];
-    return p.colors.filter(c => typeof c === 'string' && c.trim().length > 0);
-  });
+  const todos = productos.flatMap(p => (p.colors || []).filter(c => typeof c === 'string' && c.trim().length > 0));
   return [...new Set(todos)].sort();
 }
 
@@ -399,8 +361,7 @@ async function actualizarFiltros() {
     const categorias = await res.json();
     let html = `<button class="filter-btn active" data-filter="all">Todos</button>`;
     categorias.forEach(cat => {
-      const active = filtroCategoria === cat ? 'active' : '';
-      html += `<button class="filter-btn ${active}" data-filter="${cat}">${cat}</button>`;
+      html += `<button class="filter-btn ${filtroCategoria === cat ? 'active' : ''}" data-filter="${cat}">${cat}</button>`;
     });
     filterContainer.innerHTML = html;
     filterContainer.querySelectorAll('.filter-btn').forEach(btn => {
@@ -423,7 +384,7 @@ async function cargarPagina(page) {
 }
 
 // ============================================
-// RENDERIZADO CATÁLOGO (con lightbox)
+// RENDER CATÁLOGO (con lightbox y carrito)
 // ============================================
 function renderizarCatalogo(conPaginacion = true) {
   if (!catalogContainer) return;
@@ -445,7 +406,9 @@ function renderizarCatalogo(conPaginacion = true) {
     html += `<div class="category-section"><h2 class="category-title">${cat}</h2><div class="category-grid">`;
     items.forEach(prod => {
       const images = (prod.images && prod.images.length > 0) ? prod.images : ['https://picsum.photos/seed/default/400/400'];
-      const colors = prod.colors || [];
+      // 🟢 FILTRAR COLORES VACÍOS
+      const colors = (prod.colors || []).filter(c => c && c.trim().length > 0);
+
       let carouselHtml = `<div class="carousel" data-id="${prod.id}"><div class="slides" style="transform: translateX(0%);">`;
       images.forEach(img => {
         carouselHtml += `<img src="${img}" alt="${prod.name}" loading="lazy">`;
@@ -458,16 +421,17 @@ function renderizarCatalogo(conPaginacion = true) {
         carouselHtml += `<span class="${idx === 0 ? 'active' : ''}" data-id="${prod.id}" data-index="${idx}"></span>`;
       });
       carouselHtml += `</div></div>`;
+
       let colorsHtml = '';
       if (colors.length) {
         colorsHtml = `<div class="colors">`;
         colors.forEach(color => {
-          const isColor = CSS.supports('color', color);
-          const bgColor = isColor ? color : '#ccc';
+          const bgColor = CSS.supports('color', color) ? color : '#ccc';
           colorsHtml += `<span class="color-dot" style="background:${bgColor};" title="${color}"></span>`;
         });
         colorsHtml += `</div>`;
       }
+
       html += `
         <div class="product-card">
           ${carouselHtml}
@@ -535,7 +499,7 @@ function renderizarCatalogo(conPaginacion = true) {
     });
   });
 
-  // Evento lightbox en imágenes del carrusel
+  // Lightbox
   document.querySelectorAll('.carousel .slides img').forEach(img => {
     img.style.cursor = 'pointer';
     img.addEventListener('click', function(e) {
@@ -562,7 +526,7 @@ function renderizarListaAdmin() {
     const toggleLabel = prod.visible !== false ? 'Ocultar' : 'Mostrar';
     const toggleClass = prod.visible !== false ? '' : 'off';
     const categoryTag = prod.category ? `<span class="category-tag" data-type="category" title="Doble clic para eliminar">${prod.category}</span>` : '';
-    const colorTags = (prod.colors || []).map(c =>
+    const colorTags = (prod.colors || []).filter(c => c && c.trim()).map(c =>
       `<span class="color-tag" data-type="color" title="Doble clic para eliminar">${c}</span>`
     ).join('');
     html += `
@@ -754,7 +718,7 @@ function resetFormulario() {
 }
 
 // ============================================
-// IMÁGENES (preview)
+// IMÁGENES
 // ============================================
 function renderImagePreview() {
   imagePreviewContainer.innerHTML = '';
@@ -794,34 +758,28 @@ function agregarUrlsDesdeInput() {
 // BOTÓN ADMIN
 // ============================================
 function mostrarBotonAdmin() {
-    if (typeof sesionActiva === 'undefined') {
-        sesionActiva = false;
+  let btn = document.getElementById('btnAdmin');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'btnAdmin';
+    btn.className = 'btn-admin';
+    btn.addEventListener('click', () => {
+      if (jwtToken) {
+        abrirAdmin();
+      } else {
+        abrirLogin();
+      }
+    });
+    const container = document.getElementById('adminButtonContainer');
+    if (container) {
+      container.appendChild(btn);
+    } else {
+      console.warn('⚠️ No se encontró #adminButtonContainer');
+      return;
     }
-
-    let btn = document.getElementById('btnAdmin');
-    if (!btn) {
-        btn = document.createElement('button');
-        btn.id = 'btnAdmin';
-        btn.className = 'btn-admin';
-        btn.addEventListener('click', () => {
-            if (sesionActiva) {
-                abrirAdmin();
-            } else {
-                abrirLogin();
-            }
-        });
-        const container = document.getElementById('adminButtonContainer');
-        if (container) {
-            container.appendChild(btn);
-        } else {
-            console.warn('⚠️ No se encontró #adminButtonContainer');
-            return;
-        }
-    }
-    
-    // 👇 FORZAR VISIBILIDAD añadiendo la clase 'visible'
-    btn.classList.add('visible');
-    btn.textContent = sesionActiva ? 'Panel Admin' : '🔐 Acceso Admin';
+  }
+  btn.classList.add('visible');
+  btn.textContent = jwtToken ? 'Panel Admin' : '🔐 Acceso Admin';
 }
 
 function actualizarBotonAdmin() {
@@ -837,33 +795,15 @@ function ocultarBotonAdmin() {
 }
 
 // ============================================
-// VERIFICAR TOKEN URL
+// VERIFICAR TOKEN
 // ============================================
-
-async function validarTokenURL(token) {
-    try {
-        const res = await fetch(`/api/auth/validar-token?token=${encodeURIComponent(token)}`);
-        if (!res.ok) {
-            const error = await res.json();
-            console.warn('Token inválido:', error.error);
-            return false;
-        }
-        const data = await res.json();
-        return data.valido === true;
-    } catch (error) {
-        console.error('Error validando token:', error);
-        return false;
-    }
-} 
 async function verificarAccesoAdmin() {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get('token');
-
   if (!token) {
     tokenUrlValido = false;
     return;
   }
-
   const valido = await validarTokenURL(token);
   if (valido) {
     tokenUrlValido = true;
@@ -871,8 +811,7 @@ async function verificarAccesoAdmin() {
   } else {
     tokenUrlValido = false;
     alert('El enlace de acceso no es válido o ha expirado.');
-    const nuevaUrl = window.location.pathname;
-    window.history.replaceState({}, document.title, nuevaUrl);
+    window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
 
@@ -889,7 +828,10 @@ async function manejarLogin(e) {
     loginError.textContent = '';
     cerrarLogin();
     actualizarBotonAdmin();
-    abrirAdmin();
+    // 🔥 FORZAR APERTURA DEL MODAL ADMIN
+    setTimeout(() => {
+      abrirAdmin();
+    }, 100);
   } catch (error) {
     loginError.textContent = error.message || 'Usuario o contraseña incorrectos.';
   }
@@ -899,14 +841,10 @@ function cerrarSesion() {
   if (confirm('¿Cerrar sesión de administrador?')) {
     jwtToken = null;
     tokenUrlValido = false;
-
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('token')) {
-      urlParams.delete('token');
-      const nuevaUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-      window.history.replaceState({}, document.title, nuevaUrl);
-    }
-
+    urlParams.delete('token');
+    const nuevaUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+    window.history.replaceState({}, document.title, nuevaUrl);
     ocultarBotonAdmin();
     cerrarAdmin();
     cerrarLogin();
@@ -930,6 +868,7 @@ function abrirAdmin() {
     abrirLogin();
     return;
   }
+  // Asegurar que el modal se abra
   adminModal.classList.add('active');
   renderizarListaAdmin();
   actualizarDatalists();
@@ -970,7 +909,7 @@ async function init() {
   cartOverlay.addEventListener('click', cerrarCarrito);
   cartWhatsApp.addEventListener('click', generarMensajeWhatsApp);
 
-  // Eventos lightbox
+  // Lightbox
   lightbox.addEventListener('click', function(e) {
     if (e.target === this || e.target === lightboxImg) {
       lightbox.classList.remove('active');
@@ -982,7 +921,7 @@ async function init() {
     document.body.style.overflow = '';
   });
 
-  // Eventos admin
+  // Admin
   loginClose.addEventListener('click', cerrarLogin);
   adminClose.addEventListener('click', cerrarAdmin);
   logoutBtn.addEventListener('click', cerrarSesion);
