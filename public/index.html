@@ -11,10 +11,8 @@
   <!-- ===== BARRA DE NAVEGACIÓN ===== -->
   <header class="navbar">
     <span class="brand" id="brandTitle">✨ MODA URBANA</span>
-    <div style="display: flex; align-items: center; gap: 0.8rem;">
-      <button id="cartToggle" class="cart-toggle" aria-label="Abrir carrito">
-        🛒 <span id="cartCount" class="cart-badge">0</span>
-      </button>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <button id="cartToggle" class="btn-cart" aria-label="Carrito">🛒 <span id="cartCount">0</span></button>
       <div id="adminButtonContainer"></div>
     </div>
   </header>
@@ -29,32 +27,23 @@
 
   <!-- ===== CARRITO LATERAL ===== -->
   <div id="cartOverlay" class="cart-overlay"></div>
-  <aside id="cartSidebar" class="cart-sidebar">
+  <div id="cartSidebar" class="cart-sidebar">
     <div class="cart-header">
-      <h2>🛒 Tu Carrito</h2>
-      <button id="cartClose" class="cart-close">&times;</button>
+      <h2>🛒 Carrito</h2>
+      <button id="cartClose" class="cart-close">✕</button>
     </div>
-    <div id="cartItems" class="cart-items">
-      <p class="cart-empty">El carrito está vacío.</p>
+    <div id="cartItems" class="cart-items"></div>
+    <div class="cart-observations">
+      <label for="cartObservations">Observaciones (talle, color, etc.)</label>
+      <textarea id="cartObservations" rows="2" placeholder="Ej: Talle M, color negro"></textarea>
     </div>
     <div class="cart-footer">
-      <div class="cart-total">
-        <span>Total:</span>
-        <span id="cartTotalPrice">$0.00</span>
-      </div>
-      <button id="cartWhatsApp" class="btn-primary cart-send">
-        Enviar por WhatsApp
-      </button>
+      <div class="cart-total">Total: <span id="cartTotalPrice">$0.00</span></div>
+      <button id="cartWhatsApp" class="btn-whatsapp">📱 Enviar por WhatsApp</button>
     </div>
-  </aside>
-
-  <!-- ===== LIGHTBOX ===== -->
-  <div id="imageLightbox" class="lightbox-overlay">
-    <span class="lightbox-close">&times;</span>
-    <img class="lightbox-image" id="lightboxImg" src="" alt="Ampliar imagen">
   </div>
 
-  <!-- ===== MODALES ADMIN ===== -->
+  <!-- ===== MODAL DE LOGIN ===== -->
   <div id="loginModal" class="modal-overlay">
     <div class="modal-card">
       <button class="modal-close" id="loginClose">&times;</button>
@@ -74,11 +63,11 @@
     </div>
   </div>
 
+  <!-- ===== MODAL ADMIN ===== -->
   <div id="adminModal" class="modal-overlay">
     <div class="modal-card wide">
       <button class="modal-close" id="adminClose">&times;</button>
       <h2>Panel de Administración</h2>
-
       <form id="productForm">
         <div class="form-row">
           <div class="form-group">
@@ -97,23 +86,21 @@
         </div>
         <div class="form-group">
           <label for="prodDesc">Descripción</label>
-          <textarea id="prodDesc" rows="2" placeholder="Breve descripción de la prenda..."></textarea>
+          <textarea id="prodDesc" rows="2" placeholder="Breve descripción..."></textarea>
         </div>
         <div class="form-group">
           <label for="prodColors">Colores disponibles</label>
           <input type="text" id="prodColors" placeholder="Ej: Negro, Blanco, Rojo (separados por coma)" list="colorList">
           <datalist id="colorList"></datalist>
-          <small>Ingresa los colores separados por coma.</small>
         </div>
         <div class="form-group">
           <label>Imágenes</label>
           <div class="image-input-group">
-            <input type="text" id="prodImageUrls" placeholder="URLs separadas por coma (presiona Enter o pierde el foco)">
+            <input type="text" id="prodImageUrls" placeholder="URLs separadas por coma (Enter para agregar)">
             <span class="sep">o</span>
             <input type="file" id="prodImageFiles" accept="image/*" multiple>
           </div>
           <div id="imagePreviewContainer" class="image-preview-grid"></div>
-          <small>Las imágenes se agregan automáticamente al seleccionar archivos o al escribir URLs y presionar Enter.</small>
         </div>
         <div class="form-group form-check">
           <label>
@@ -127,17 +114,20 @@
         </div>
         <input type="hidden" id="editIndex" value="-1">
       </form>
-
       <hr>
-
       <div class="admin-list">
         <h3>Productos existentes</h3>
         <div id="adminProductList"></div>
       </div>
-
       <button id="resetDataBtn" class="btn-danger" style="margin-top:0.5rem; width:100%;">Resetear datos</button>
       <button id="logoutBtn" class="btn-danger" style="margin-top:0.5rem; width:100%;">Cerrar Sesión</button>
     </div>
+  </div>
+
+  <!-- ===== LIGHTBOX ===== -->
+  <div id="imageLightbox" class="lightbox">
+    <span class="lightbox-close">&times;</span>
+    <img id="lightboxImg" src="" alt="Imagen ampliada">
   </div>
 
   <script src="script.js"></script>
