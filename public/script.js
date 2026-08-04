@@ -20,7 +20,7 @@ let currentImages = [];
 let carrito = [];
 
 // ============================================
-// REFERENCIAS DOM (con verificación de existencia)
+// REFERENCIAS DOM
 // ============================================
 const catalogContainer = document.getElementById('catalogContainer');
 const filterContainer = document.getElementById('filterContainer');
@@ -60,6 +60,7 @@ const cartItems = document.getElementById('cartItems');
 const cartTotalPrice = document.getElementById('cartTotalPrice');
 const cartCount = document.getElementById('cartCount');
 const cartWhatsApp = document.getElementById('cartWhatsApp');
+const cartObservations = document.getElementById('cartObservations');
 
 // Lightbox
 const lightbox = document.getElementById('imageLightbox');
@@ -67,7 +68,18 @@ const lightboxImg = document.getElementById('lightboxImg');
 const lightboxClose = document.querySelector('.lightbox-close');
 
 // ============================================
-// CARRITO (con precios como número)
+// UTILIDADES DE FORMATO
+// ============================================
+function formatoPrecio(valor) {
+    // Formato argentino: puntos para miles y coma para decimales (ej. 15.000,00)
+    // pero en la UI usamos solo enteros o dos decimales
+    if (typeof valor === 'string') valor = parseFloat(valor) || 0;
+    if (isNaN(valor)) valor = 0;
+    return valor.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.').replace(/\./g, ',').replace(',', '.');
+}
+
+// ============================================
+// CARRITO
 // ============================================
 function cargarCarrito() {
   const stored = localStorage.getItem('carrito');
@@ -173,7 +185,7 @@ function renderizarCarrito() {
 
   if (carrito.length === 0) {
     cartItems.innerHTML = `<p class="cart-empty">El carrito está vacío.</p>`;
-    cartTotalPrice.textContent = '$0.00';
+    cartTotalPrice.textContent = '$0,00';
     return;
   }
 
@@ -188,7 +200,7 @@ function renderizarCarrito() {
       <div class="cart-item" data-id="${item.id}">
         <div class="item-info">
           <div class="item-name">${item.name}</div>
-          <div class="item-price">$${price.toFixed(2)} c/u</div>
+          <div class="item-price">$${formatoPrecio(price)} c/u</div>
         </div>
         <div class="item-qty">
           <button class="qty-btn" data-action="minus" data-id="${item.id}">−</button>
@@ -201,7 +213,7 @@ function renderizarCarrito() {
   });
 
   cartItems.innerHTML = html;
-  cartTotalPrice.textContent = `$${total.toFixed(2)}`;
+  cartTotalPrice.textContent = `$${formatoPrecio(total)}`;
 
   cartItems.querySelectorAll('.qty-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
@@ -229,6 +241,9 @@ function generarMensajeWhatsApp() {
     alert('El carrito está vacío. Agrega productos primero.');
     return;
   }
+
+  const observaciones = cartObservations ? cartObservations.value.trim() : '';
+
   let mensaje = '¡Hola! Me interesan estos productos:\n\n';
   let total = 0;
   carrito.forEach(item => {
@@ -236,10 +251,18 @@ function generarMensajeWhatsApp() {
     const cantidad = item.cantidad || 0;
     const subtotal = price * cantidad;
     total += subtotal;
-    mensaje += `• ${item.name} x ${cantidad} = $${subtotal.toFixed(2)}\n`;
+    mensaje += `• ${item.name} x ${cantidad} = $${formatoPrecio(subtotal)}\n`;
   });
-  mensaje += `\nTotal: $${total.toFixed(2)}`;
+  mensaje += `\nTotal: $${formatoPrecio(total)}`;
+
+  if (observaciones) {
+    mensaje += `\n\n📝 Observaciones: ${observaciones}`;
+  } else {
+    mensaje += `\n\n📝 Por favor, indicar talla y color al responder.`;
+  }
+
   mensaje += `\n\n¡Gracias!`;
+
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, '_blank');
 }
@@ -369,8 +392,6 @@ async function iniciarSesion(username, password) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-
-    // Manejar errores HTTP
     if (!res.ok) {
       let errorMsg;
       try {
@@ -381,7 +402,6 @@ async function iniciarSesion(username, password) {
       }
       throw new Error(errorMsg);
     }
-
     const data = await res.json();
     if (!data.token) {
       throw new Error('El servidor no devolvió un token de autenticación.');
@@ -467,6 +487,7 @@ function renderizarCatalogo(conPaginacion = true) {
     items.forEach(prod => {
       const images = (prod.images && prod.images.length > 0) ? prod.images : ['https://picsum.photos/seed/default/400/400'];
       const colors = (prod.colors || []).filter(c => c && c.trim().length > 0);
+      const price = typeof prod.price === 'number' ? prod.price : parseFloat(prod.price) || 0;
 
       let carouselHtml = `<div class="carousel" data-id="${prod.id}"><div class="slides" style="transform: translateX(0%);">`;
       images.forEach(img => {
@@ -491,14 +512,12 @@ function renderizarCatalogo(conPaginacion = true) {
         colorsHtml += `</div>`;
       }
 
-      const price = typeof prod.price === 'number' ? prod.price : parseFloat(prod.price) || 0;
-
       html += `
         <div class="product-card">
           ${carouselHtml}
           <div class="info">
             <span class="name">${prod.name}</span>
-            <span class="price">$${price.toFixed(2)}</span>
+            <span class="price">$${formatoPrecio(price)}</span>
             <span class="desc">${prod.description || ''}</span>
             ${colorsHtml}
             <button class="btn-add-cart" data-id="${prod.id}">🛒 Agregar al carrito</button>
@@ -596,7 +615,7 @@ function renderizarListaAdmin() {
       <div class="admin-item" data-index="${index}">
         <div class="info">
           <span class="name">${prod.name}</span>
-          <span class="price">$${Number(prod.price).toFixed(2)}</span>
+          <span class="price">$${formatoPrecio(prod.price)}</span>
           <span style="font-size:0.7rem;color:#999;margin-left:0.3rem;">${categoryTag} ${colorTags}</span>
           <span class="status">(${status})</span>
         </div>
