@@ -74,7 +74,6 @@ function cargarCarrito() {
   if (stored) {
     try {
       carrito = JSON.parse(stored);
-      // Asegurar que cada precio sea número
       carrito = carrito.map(item => ({
         ...item,
         price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0
@@ -89,7 +88,6 @@ function cargarCarrito() {
 }
 
 function guardarCarrito() {
-  // Asegurar que los precios sean números antes de guardar
   carrito = carrito.map(item => ({
     ...item,
     price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0
@@ -259,7 +257,6 @@ function normalizarProducto(prod) {
   if (!prod.description) prod.description = '';
   if (!prod.sizes || !Array.isArray(prod.sizes)) prod.sizes = [];
   if (!prod.stock) prod.stock = 0;
-  // Asegurar que price sea número
   prod.price = typeof prod.price === 'number' ? prod.price : parseFloat(prod.price) || 0;
   return prod;
 }
@@ -315,12 +312,13 @@ async function guardarProductoAPI(producto, index) {
         cerrarSesion();
         return null;
       }
-      throw new Error('Error al guardar');
+      const errorData = await res.text();
+      throw new Error(`Error al guardar: ${res.status} - ${errorData}`);
     }
     return await res.json();
   } catch (error) {
     console.error('Error guardando producto:', error);
-    alert('Hubo un error al guardar el producto.');
+    alert(`Hubo un error al guardar el producto: ${error.message}`);
     return null;
   }
 }
@@ -371,13 +369,25 @@ async function iniciarSesion(username, password) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
+
+    // Manejar errores HTTP
     if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || 'Credenciales inválidas');
+      let errorMsg;
+      try {
+        const errorData = await res.json();
+        errorMsg = errorData.error || `Error ${res.status}: ${res.statusText}`;
+      } catch (e) {
+        errorMsg = `Error ${res.status}: ${res.statusText}`;
+      }
+      throw new Error(errorMsg);
     }
+
     const data = await res.json();
+    if (!data.token) {
+      throw new Error('El servidor no devolvió un token de autenticación.');
+    }
     jwtToken = data.token;
-    console.log('✅ JWT Token obtenido');
+    console.log('✅ JWT Token obtenido correctamente');
     return true;
   } catch (error) {
     console.error('Error en login:', error);
@@ -882,12 +892,12 @@ async function manejarLogin(e) {
     loginError.textContent = '';
     cerrarLogin();
     actualizarBotonAdmin();
-    // Forzar apertura del modal admin
     setTimeout(() => {
       abrirAdmin();
     }, 200);
   } catch (error) {
     loginError.textContent = error.message || 'Usuario o contraseña incorrectos.';
+    console.error('Error en login:', error);
   }
 }
 
@@ -963,7 +973,7 @@ async function init() {
   renderizarCatalogo();
   renderizarCarrito();
 
-  // Eventos carrito (con verificación)
+  // Eventos carrito
   if (cartToggle) cartToggle.addEventListener('click', abrirCarrito);
   if (cartClose) cartClose.addEventListener('click', cerrarCarrito);
   if (cartOverlay) cartOverlay.addEventListener('click', cerrarCarrito);
