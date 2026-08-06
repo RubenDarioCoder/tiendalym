@@ -19,6 +19,9 @@ let totalPaginas = 1;
 let currentImages = [];
 let carrito = [];
 
+// Producto que se está agregando (para el modal)
+let productoEnAgregar = null;
+
 // ============================================
 // REFERENCIAS DOM
 // ============================================
@@ -61,6 +64,14 @@ const cartTotalPrice = document.getElementById('cartTotalPrice');
 const cartCount = document.getElementById('cartCount');
 const cartWhatsApp = document.getElementById('cartWhatsApp');
 
+// Modal de especificaciones
+const especModal = document.getElementById('especModal');
+const especProductName = document.getElementById('especProductName');
+const especProductPrice = document.getElementById('especProductPrice');
+const especInput = document.getElementById('especInput');
+const especConfirm = document.getElementById('especConfirm');
+const especCancel = document.getElementById('especCancel');
+
 // Lightbox
 const lightbox = document.getElementById('imageLightbox');
 const lightboxImg = document.getElementById('lightboxImg');
@@ -70,7 +81,6 @@ const lightboxClose = document.querySelector('.lightbox-close');
 // FUNCIÓN AUXILIAR: Formatear precio
 // ============================================
 function formatearPrecio(precio) {
-    // Convierte a número y formatea con punto de miles y coma decimal (es-AR)
     const num = typeof precio === 'number' ? precio : parseFloat(precio) || 0;
     return num.toLocaleString('es-AR', {
         minimumFractionDigits: 2,
@@ -79,7 +89,34 @@ function formatearPrecio(precio) {
 }
 
 // ============================================
-// CARRITO (con especificaciones por producto)
+// MODAL DE ESPECIFICACIONES
+// ============================================
+function abrirModalEspecificaciones(producto) {
+    productoEnAgregar = producto;
+    const price = typeof producto.price === 'number' ? producto.price : parseFloat(producto.price) || 0;
+    especProductName.textContent = producto.name;
+    especProductPrice.textContent = `$${formatearPrecio(price)}`;
+    especInput.value = '';
+    especModal.classList.add('active');
+    especInput.focus();
+}
+
+function cerrarModalEspecificaciones() {
+    especModal.classList.remove('active');
+    productoEnAgregar = null;
+    especInput.value = '';
+}
+
+// Confirmar agregar al carrito con especificación
+function confirmarAgregarAlCarrito() {
+    if (!productoEnAgregar) return;
+    const especificacion = especInput.value.trim();
+    agregarAlCarritoConEspec(productoEnAgregar.id, especificacion);
+    cerrarModalEspecificaciones();
+}
+
+// ============================================
+// CARRITO (con especificaciones)
 // ============================================
 function cargarCarrito() {
     const stored = localStorage.getItem('carrito');
@@ -115,12 +152,12 @@ function actualizarContadorCarrito() {
     if (cartCount) cartCount.textContent = total;
 }
 
-function agregarAlCarrito(productoId) {
+function agregarAlCarritoConEspec(productoId, especificacion) {
     const prod = productos.find(p => p.id == productoId);
     if (!prod) return;
     const price = typeof prod.price === 'number' ? prod.price : parseFloat(prod.price) || 0;
 
-    const existe = carrito.find(item => item.id == productoId);
+    const existe = carrito.find(item => item.id == productoId && item.especificacion === especificacion);
     if (existe) {
         existe.cantidad = (existe.cantidad || 0) + 1;
     } else {
@@ -130,12 +167,13 @@ function agregarAlCarrito(productoId) {
             price: price,
             cantidad: 1,
             image: (prod.images && prod.images.length > 0) ? prod.images[0] : '',
-            especificacion: '' // Campo para talle/color/nota
+            especificacion: especificacion || ''
         });
     }
     guardarCarrito();
     renderizarCarrito();
-    abrirCarrito();
+
+    // Efecto visual en el botón
     const btn = document.querySelector(`.btn-add-cart[data-id="${productoId}"]`);
     if (btn) {
         btn.textContent = '✓ Agregado';
@@ -145,10 +183,13 @@ function agregarAlCarrito(productoId) {
             btn.classList.remove('added');
         }, 2000);
     }
+
+    // Abrir carrito para mostrar el resultado
+    abrirCarrito();
 }
 
-function quitarDelCarrito(productoId) {
-    const idx = carrito.findIndex(item => item.id == productoId);
+function quitarDelCarrito(productoId, especificacion) {
+    const idx = carrito.findIndex(item => item.id == productoId && item.especificacion === especificacion);
     if (idx !== -1) {
         if (carrito[idx].cantidad > 1) {
             carrito[idx].cantidad -= 1;
@@ -160,8 +201,8 @@ function quitarDelCarrito(productoId) {
     }
 }
 
-function eliminarItemCarrito(productoId) {
-    const idx = carrito.findIndex(item => item.id == productoId);
+function eliminarItemCarrito(productoId, especificacion) {
+    const idx = carrito.findIndex(item => item.id == productoId && item.especificacion === especificacion);
     if (idx !== -1) {
         carrito.splice(idx, 1);
         guardarCarrito();
@@ -199,23 +240,19 @@ function renderizarCarrito() {
         const cantidad = item.cantidad || 0;
         const subtotal = price * cantidad;
         total += subtotal;
+        const espec = item.especificacion ? ` (${item.especificacion})` : '';
         html += `
-            <div class="cart-item" data-id="${item.id}" data-index="${idx}">
+            <div class="cart-item" data-id="${item.id}" data-espec="${item.especificacion || ''}">
                 <div class="item-info">
-                    <div class="item-name">${item.name}</div>
+                    <div class="item-name">${item.name}${espec}</div>
                     <div class="item-price">$${formatearPrecio(price)} c/u</div>
                 </div>
-                <div class="item-especificacion">
-                    <input type="text" class="espec-input" data-id="${item.id}" 
-                           placeholder="Talle / Color / Nota" 
-                           value="${item.especificacion || ''}">
-                </div>
                 <div class="item-qty">
-                    <button class="qty-btn" data-action="minus" data-id="${item.id}">−</button>
+                    <button class="qty-btn" data-action="minus" data-id="${item.id}" data-espec="${item.especificacion || ''}">−</button>
                     <span>${cantidad}</span>
-                    <button class="qty-btn" data-action="plus" data-id="${item.id}">+</button>
+                    <button class="qty-btn" data-action="plus" data-id="${item.id}" data-espec="${item.especificacion || ''}">+</button>
                 </div>
-                <button class="item-remove" data-id="${item.id}">✕</button>
+                <button class="item-remove" data-id="${item.id}" data-espec="${item.especificacion || ''}">✕</button>
             </div>
         `;
     });
@@ -228,40 +265,27 @@ function renderizarCarrito() {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const id = parseInt(this.dataset.id);
+            const espec = this.dataset.espec || '';
             if (this.dataset.action === 'plus') {
-                agregarAlCarrito(id);
+                // Para plus, reutilizamos la lógica: buscamos el producto original
+                const prod = productos.find(p => p.id == id);
+                if (prod) {
+                    agregarAlCarritoConEspec(id, espec);
+                }
             } else {
-                quitarDelCarrito(id);
+                quitarDelCarrito(id, espec);
             }
         });
     });
 
-    // Eventos de eliminación
+    // Eventos de eliminación (AHORA FUNCIONAN)
     cartItems.querySelectorAll('.item-remove').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const id = parseInt(this.dataset.id);
-            eliminarItemCarrito(id);
-        });
-    });
-
-    // Eventos de especificación (guardar en tiempo real)
-    cartItems.querySelectorAll('.espec-input').forEach(input => {
-        input.addEventListener('change', function(e) {
-            const id = parseInt(this.dataset.id);
-            const item = carrito.find(it => it.id === id);
-            if (item) {
-                item.especificacion = this.value.trim();
-                guardarCarrito();
-            }
-        });
-        // También guardar al perder el foco
-        input.addEventListener('blur', function(e) {
-            const id = parseInt(this.dataset.id);
-            const item = carrito.find(it => it.id === id);
-            if (item) {
-                item.especificacion = this.value.trim();
-                guardarCarrito();
+            const espec = this.dataset.espec || '';
+            if (confirm(`¿Eliminar "${carrito.find(i => i.id == id && i.especificacion === espec)?.name}" del carrito?`)) {
+                eliminarItemCarrito(id, espec);
             }
         });
     });
@@ -292,7 +316,7 @@ function generarMensajeWhatsApp() {
 }
 
 // ============================================
-// API Y NORMALIZACIÓN (sin cambios relevantes)
+// API Y NORMALIZACIÓN
 // ============================================
 function normalizarProducto(prod) {
     if (!prod.images || !Array.isArray(prod.images)) {
@@ -488,7 +512,7 @@ async function cargarPagina(page) {
 }
 
 // ============================================
-// RENDER CATÁLOGO (con formato de precio)
+// RENDER CATÁLOGO
 // ============================================
 function renderizarCatalogo(conPaginacion = true) {
     if (!catalogContainer) return;
@@ -595,12 +619,15 @@ function renderizarCatalogo(conPaginacion = true) {
         });
     });
 
-    // Carrito
+    // Carrito - ABRIR MODAL DE ESPECIFICACIONES
     document.querySelectorAll('.btn-add-cart').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const id = parseInt(this.dataset.id);
-            agregarAlCarrito(id);
+            const prod = productos.find(p => p.id == id);
+            if (prod) {
+                abrirModalEspecificaciones(prod);
+            }
         });
     });
 
@@ -708,7 +735,7 @@ function renderizarListaAdmin() {
 }
 
 // ============================================
-// CRUD (igual que antes, sin cambios)
+// CRUD
 // ============================================
 async function guardarProductoHandler(e) {
     e.preventDefault();
@@ -1022,6 +1049,29 @@ async function init() {
     if (cartClose) cartClose.addEventListener('click', cerrarCarrito);
     if (cartOverlay) cartOverlay.addEventListener('click', cerrarCarrito);
     if (cartWhatsApp) cartWhatsApp.addEventListener('click', generarMensajeWhatsApp);
+
+    // Eventos modal de especificaciones
+    if (especCancel) especCancel.addEventListener('click', cerrarModalEspecificaciones);
+    if (especConfirm) especConfirm.addEventListener('click', confirmarAgregarAlCarrito);
+    if (especModal) {
+        especModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModalEspecificaciones();
+            }
+        });
+        // Enter en el input confirma
+        if (especInput) {
+            especInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmarAgregarAlCarrito();
+                }
+                if (e.key === 'Escape') {
+                    cerrarModalEspecificaciones();
+                }
+            });
+        }
+    }
 
     // Lightbox
     if (lightbox) {
