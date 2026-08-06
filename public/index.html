@@ -129,6 +129,23 @@
     <span class="lightbox-close">&times;</span>
     <img id="lightboxImg" src="" alt="Imagen ampliada">
   </div>
+  <!-- ===== MODAL DE ESPECIFICACIONES (Color/Talle) ===== -->
+  <div id="especModal" class="modal-overlay">
+      <div class="modal-card">
+          <h2>Detalle del producto</h2>
+          <p class="espec-product-name" id="especProductName"></p>
+          <p class="espec-product-price" id="especProductPrice"></p>
+          <div class="form-group">
+              <label for="especInput">Color / Talle / Nota (opcional)</label>
+              <input type="text" id="especInput" placeholder="Ej: Talle M, Color Negro">
+              <small>Especifica el color y talle para este producto.</small>
+          </div>
+          <div class="form-actions">
+              <button class="btn-primary" id="especConfirm">Agregar al carrito</button>
+              <button class="btn-secondary" id="especCancel">Cancelar</button>
+          </div>
+      </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
