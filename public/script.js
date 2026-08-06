@@ -18,9 +18,8 @@ let paginaActual = 1;
 let totalPaginas = 1;
 let currentImages = [];
 let carrito = [];
-
-// Producto que se está agregando (para el modal)
 let productoEnAgregar = null;
+let lightboxAbierto = false; // Flag para evitar aperturas múltiples
 
 // ============================================
 // REFERENCIAS DOM
@@ -78,6 +77,21 @@ const lightboxImg = document.getElementById('lightboxImg');
 const lightboxClose = document.querySelector('.lightbox-close');
 
 // ============================================
+// FUNCIONES DE UTILIDAD (SCROLL)
+// ============================================
+function bloquearScroll() {
+    document.body.style.overflow = 'hidden';
+}
+
+function desbloquearScroll() {
+    // Solo desbloquear si no hay otros modales activos
+    const modalesActivos = document.querySelectorAll('.modal-overlay.active, #cartOverlay.active, .lightbox-active');
+    if (modalesActivos.length === 0) {
+        document.body.style.overflow = '';
+    }
+}
+
+// ============================================
 // FUNCIÓN AUXILIAR: Formatear precio
 // ============================================
 function formatearPrecio(precio) {
@@ -105,14 +119,33 @@ function cerrarModalEspecificaciones() {
     especModal.classList.remove('active');
     productoEnAgregar = null;
     especInput.value = '';
+    desbloquearScroll();
 }
 
-// Confirmar agregar al carrito con especificación
 function confirmarAgregarAlCarrito() {
     if (!productoEnAgregar) return;
     const especificacion = especInput.value.trim();
     agregarAlCarritoConEspec(productoEnAgregar.id, especificacion);
     cerrarModalEspecificaciones();
+}
+
+// ============================================
+// LIGHTBOX (corregido)
+// ============================================
+function abrirLightbox(src) {
+    if (lightboxAbierto) return; // Evita múltiples aperturas
+    lightboxAbierto = true;
+    lightboxImg.src = src;
+    lightbox.classList.add('active', 'lightbox-active');
+    bloquearScroll();
+}
+
+function cerrarLightbox() {
+    if (!lightboxAbierto) return;
+    lightboxAbierto = false;
+    lightbox.classList.remove('active', 'lightbox-active');
+    lightboxImg.src = '';
+    desbloquearScroll();
 }
 
 // ============================================
@@ -173,7 +206,6 @@ function agregarAlCarritoConEspec(productoId, especificacion) {
     guardarCarrito();
     renderizarCarrito();
 
-    // Efecto visual en el botón
     const btn = document.querySelector(`.btn-add-cart[data-id="${productoId}"]`);
     if (btn) {
         btn.textContent = '✓ Agregado';
@@ -184,7 +216,6 @@ function agregarAlCarritoConEspec(productoId, especificacion) {
         }, 2000);
     }
 
-    // Abrir carrito para mostrar el resultado
     abrirCarrito();
 }
 
@@ -214,14 +245,14 @@ function abrirCarrito() {
     if (!cartOverlay || !cartSidebar) return;
     cartOverlay.classList.add('active');
     cartSidebar.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    bloquearScroll();
 }
 
 function cerrarCarrito() {
     if (!cartOverlay || !cartSidebar) return;
     cartOverlay.classList.remove('active');
     cartSidebar.classList.remove('open');
-    document.body.style.overflow = '';
+    desbloquearScroll();
 }
 
 function renderizarCarrito() {
@@ -235,7 +266,7 @@ function renderizarCarrito() {
 
     let html = '';
     let total = 0;
-    carrito.forEach((item, idx) => {
+    carrito.forEach((item) => {
         const price = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0;
         const cantidad = item.cantidad || 0;
         const subtotal = price * cantidad;
@@ -260,14 +291,12 @@ function renderizarCarrito() {
     cartItems.innerHTML = html;
     cartTotalPrice.textContent = `$${formatearPrecio(total)}`;
 
-    // Eventos de cantidad
     cartItems.querySelectorAll('.qty-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const id = parseInt(this.dataset.id);
             const espec = this.dataset.espec || '';
             if (this.dataset.action === 'plus') {
-                // Para plus, reutilizamos la lógica: buscamos el producto original
                 const prod = productos.find(p => p.id == id);
                 if (prod) {
                     agregarAlCarritoConEspec(id, espec);
@@ -278,13 +307,13 @@ function renderizarCarrito() {
         });
     });
 
-    // Eventos de eliminación (AHORA FUNCIONAN)
     cartItems.querySelectorAll('.item-remove').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const id = parseInt(this.dataset.id);
             const espec = this.dataset.espec || '';
-            if (confirm(`¿Eliminar "${carrito.find(i => i.id == id && i.especificacion === espec)?.name}" del carrito?`)) {
+            const item = carrito.find(i => i.id == id && i.especificacion === espec);
+            if (item && confirm(`¿Eliminar "${item.name}" del carrito?`)) {
                 eliminarItemCarrito(id, espec);
             }
         });
@@ -631,22 +660,32 @@ function renderizarCatalogo(conPaginacion = true) {
         });
     });
 
-    // Lightbox
+    // Lightbox (con prevención de doble clic)
     document.querySelectorAll('.carousel .slides img').forEach(img => {
         img.style.cursor = 'pointer';
         img.addEventListener('click', function(e) {
             e.stopPropagation();
-            if (lightboxImg && lightbox) {
-                lightboxImg.src = this.src;
-                lightbox.classList.add('active');
-                document.body.style.overflow = 'hidden';
+            e.preventDefault();
+            if (this.src) {
+                abrirLightbox(this.src);
+            }
+        });
+        // Prevenir el doble clic para que no cause conflictos
+        img.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Si el lightbox ya está abierto, no hacer nada
+            if (lightboxAbierto) return;
+            // Abrir el lightbox con la imagen al hacer doble clic también
+            if (this.src) {
+                abrirLightbox(this.src);
             }
         });
     });
 }
 
 // ============================================
-// RENDER LISTA ADMIN (con formato de precio)
+// RENDER LISTA ADMIN
 // ============================================
 function renderizarListaAdmin() {
     if (!adminProductList) return;
@@ -998,6 +1037,7 @@ function cerrarLogin() {
     loginModal.classList.remove('active');
     loginForm.reset();
     if (loginError) loginError.textContent = '';
+    desbloquearScroll();
 }
 
 function abrirAdmin() {
@@ -1018,6 +1058,7 @@ function abrirAdmin() {
 function cerrarAdmin() {
     if (!adminModal) return;
     adminModal.classList.remove('active');
+    desbloquearScroll();
 }
 
 // ============================================
@@ -1059,7 +1100,6 @@ async function init() {
                 cerrarModalEspecificaciones();
             }
         });
-        // Enter en el input confirma
         if (especInput) {
             especInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
@@ -1075,19 +1115,22 @@ async function init() {
 
     // Lightbox
     if (lightbox) {
+        // Cerrar al hacer clic en el overlay o en la imagen
         lightbox.addEventListener('click', function(e) {
             if (e.target === this || e.target === lightboxImg) {
-                lightbox.classList.remove('active');
-                document.body.style.overflow = '';
+                cerrarLightbox();
+            }
+        });
+        // Cerrar con tecla Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && lightboxAbierto) {
+                cerrarLightbox();
             }
         });
     }
     if (lightboxClose) {
         lightboxClose.addEventListener('click', function() {
-            if (lightbox) {
-                lightbox.classList.remove('active');
-                document.body.style.overflow = '';
-            }
+            cerrarLightbox();
         });
     }
 
@@ -1134,8 +1177,11 @@ async function init() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', function(e) {
             if (e.target === this) {
-                if (this === loginModal) cerrarLogin();
-                else if (this === adminModal) cerrarAdmin();
+                if (this === loginModal) {
+                    cerrarLogin();
+                } else if (this === adminModal) {
+                    cerrarAdmin();
+                }
             }
         });
     });
