@@ -1015,6 +1015,23 @@ hr {
   transform: rotate(90deg);
 }
 
+/* ===== MODAL DE ESPECIFICACIONES ===== */
+#especModal .modal-card {
+    max-width: 400px;
+}
+.espec-product-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 0.2rem;
+    color: var(--primary);
+}
+.espec-product-price {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--primary);
+    margin-bottom: 0.8rem;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (min-width: 600px) {
   .category-grid {
