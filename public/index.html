@@ -17,7 +17,7 @@
     </div>
   </header>
 
-  <!-- ===== FILTROS ===== -->
+  <!-- ===== FILTROS (solo categorías) ===== -->
   <div class="filters" id="filterContainer">
     <button class="filter-btn active" data-filter="all">Todos</button>
   </div>
@@ -33,10 +33,6 @@
       <button id="cartClose" class="cart-close">✕</button>
     </div>
     <div id="cartItems" class="cart-items"></div>
-    <div class="cart-observations">
-      <label for="cartObservations">Observaciones (talle, color, etc.)</label>
-      <textarea id="cartObservations" rows="2" placeholder="Ej: Talle M, color negro"></textarea>
-    </div>
     <div class="cart-footer">
       <div class="cart-total">Total: <span id="cartTotalPrice">$0.00</span></div>
       <button id="cartWhatsApp" class="btn-whatsapp">📱 Enviar por WhatsApp</button>
@@ -89,7 +85,7 @@
           <textarea id="prodDesc" rows="2" placeholder="Breve descripción..."></textarea>
         </div>
         <div class="form-group">
-          <label for="prodColors">Colores disponibles</label>
+          <label for="prodColors">Colores disponibles (solo para admin)</label>
           <input type="text" id="prodColors" placeholder="Ej: Negro, Blanco, Rojo (separados por coma)" list="colorList">
           <datalist id="colorList"></datalist>
         </div>
@@ -123,31 +119,32 @@
       <button id="logoutBtn" class="btn-danger" style="margin-top:0.5rem; width:100%;">Cerrar Sesión</button>
     </div>
   </div>
-  
+
+  <!-- ===== MODAL DE ESPECIFICACIONES (color/talle) ===== -->
   <div id="especModal" class="modal-overlay">
-      <div class="modal-card">
-          <h2>Detalle del producto</h2>
-          <p class="espec-product-name" id="especProductName"></p>
-          <p class="espec-product-price" id="especProductPrice"></p>
-          <div class="form-group">
-              <label for="especInput">Color / Talle / Nota (opcional)</label>
-              <input type="text" id="especInput" placeholder="Ej: Talle M, Color Negro">
-              <small>Especifica el color y talle para este producto.</small>
-          </div>
-          <div class="form-actions">
-              <button class="btn-primary" id="especConfirm">Agregar al carrito</button>
-              <button class="btn-secondary" id="especCancel">Cancelar</button>
-          </div>
+    <div class="modal-card">
+      <h2>Detalle del producto</h2>
+      <p class="espec-product-name" id="especProductName"></p>
+      <p class="espec-product-price" id="especProductPrice"></p>
+      <div class="form-group">
+        <label for="especInput">Color / Talle / Nota (opcional)</label>
+        <input type="text" id="especInput" placeholder="Ej: Talle M, Color Negro">
+        <small>Especifica el color y talle para este producto.</small>
       </div>
+      <div class="form-actions">
+        <button class="btn-primary" id="especConfirm">Agregar al carrito</button>
+        <button class="btn-secondary" id="especCancel">Cancelar</button>
+      </div>
+    </div>
   </div>
 
-  <!-- ===== MODAL DE IMAGEN (ampliada) ===== -->
-<div id="imageModal" class="modal-overlay image-modal">
+  <!-- ===== MODAL DE IMAGEN (ampliada, más grande) ===== -->
+  <div id="imageModal" class="modal-overlay image-modal">
     <div class="image-modal-content">
-        <button class="image-modal-close" id="imageModalClose">&times;</button>
-        <img id="imageModalImg" src="" alt="Imagen ampliada">
+      <button class="image-modal-close" id="imageModalClose">&times;</button>
+      <img id="imageModalImg" src="" alt="Imagen ampliada">
     </div>
-</div>
+  </div>
 
   <script src="script.js"></script>
 </body>
