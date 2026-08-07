@@ -19,7 +19,6 @@ let totalPaginas = 1;
 let currentImages = [];
 let carrito = [];
 let productoEnAgregar = null;
-let lightboxAbierto = false; // Flag para evitar aperturas múltiples
 
 // ============================================
 // REFERENCIAS DOM
@@ -71,11 +70,6 @@ const especInput = document.getElementById('especInput');
 const especConfirm = document.getElementById('especConfirm');
 const especCancel = document.getElementById('especCancel');
 
-// Lightbox
-const lightbox = document.getElementById('imageLightbox');
-const lightboxImg = document.getElementById('lightboxImg');
-const lightboxClose = document.querySelector('.lightbox-close');
-
 // ============================================
 // FUNCIONES DE UTILIDAD (SCROLL)
 // ============================================
@@ -84,8 +78,7 @@ function bloquearScroll() {
 }
 
 function desbloquearScroll() {
-    // Solo desbloquear si no hay otros modales activos
-    const modalesActivos = document.querySelectorAll('.modal-overlay.active, #cartOverlay.active, .lightbox-active');
+    const modalesActivos = document.querySelectorAll('.modal-overlay.active, #cartOverlay.active');
     if (modalesActivos.length === 0) {
         document.body.style.overflow = '';
     }
@@ -130,26 +123,7 @@ function confirmarAgregarAlCarrito() {
 }
 
 // ============================================
-// LIGHTBOX (corregido)
-// ============================================
-function abrirLightbox(src) {
-    if (lightboxAbierto) return; // Evita múltiples aperturas
-    lightboxAbierto = true;
-    lightboxImg.src = src;
-    lightbox.classList.add('active', 'lightbox-active');
-    bloquearScroll();
-}
-
-function cerrarLightbox() {
-    if (!lightboxAbierto) return;
-    lightboxAbierto = false;
-    lightbox.classList.remove('active', 'lightbox-active');
-    lightboxImg.src = '';
-    desbloquearScroll();
-}
-
-// ============================================
-// CARRITO (con especificaciones)
+// CARRITO
 // ============================================
 function cargarCarrito() {
     const stored = localStorage.getItem('carrito');
@@ -660,25 +634,23 @@ function renderizarCatalogo(conPaginacion = true) {
         });
     });
 
-    // Lightbox (con prevención de doble clic)
+    // 📸 AL HACER CLIC EN LA IMAGEN → SE ABRE EN NUEVA PESTAÑA
     document.querySelectorAll('.carousel .slides img').forEach(img => {
-        img.style.cursor = 'pointer';
+        img.style.cursor = 'zoom-in';
         img.addEventListener('click', function(e) {
             e.stopPropagation();
             e.preventDefault();
             if (this.src) {
-                abrirLightbox(this.src);
+                // Abrir la imagen en una nueva pestaña
+                window.open(this.src, '_blank');
             }
         });
-        // Prevenir el doble clic para que no cause conflictos
+        // Doble clic también abre en nueva pestaña (por si acaso)
         img.addEventListener('dblclick', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            // Si el lightbox ya está abierto, no hacer nada
-            if (lightboxAbierto) return;
-            // Abrir el lightbox con la imagen al hacer doble clic también
             if (this.src) {
-                abrirLightbox(this.src);
+                window.open(this.src, '_blank');
             }
         });
     });
@@ -1111,27 +1083,6 @@ async function init() {
                 }
             });
         }
-    }
-
-    // Lightbox
-    if (lightbox) {
-        // Cerrar al hacer clic en el overlay o en la imagen
-        lightbox.addEventListener('click', function(e) {
-            if (e.target === this || e.target === lightboxImg) {
-                cerrarLightbox();
-            }
-        });
-        // Cerrar con tecla Escape
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && lightboxAbierto) {
-                cerrarLightbox();
-            }
-        });
-    }
-    if (lightboxClose) {
-        lightboxClose.addEventListener('click', function() {
-            cerrarLightbox();
-        });
     }
 
     // Admin eventos
