@@ -14,6 +14,7 @@ let jwtToken = null;
 let tokenUrlValido = false;
 let editandoIndex = -1;
 let filtroCategoria = 'all';
+let filtroColor = null; // Nuevo: filtro por color
 let paginaActual = 1;
 let totalPaginas = 1;
 let currentImages = [];
@@ -70,6 +71,11 @@ const especInput = document.getElementById('especInput');
 const especConfirm = document.getElementById('especConfirm');
 const especCancel = document.getElementById('especCancel');
 
+// Modal de imagen
+const imageModal = document.getElementById('imageModal');
+const imageModalImg = document.getElementById('imageModalImg');
+const imageModalClose = document.getElementById('imageModalClose');
+
 // ============================================
 // FUNCIONES DE UTILIDAD (SCROLL)
 // ============================================
@@ -78,7 +84,7 @@ function bloquearScroll() {
 }
 
 function desbloquearScroll() {
-    const modalesActivos = document.querySelectorAll('.modal-overlay.active, #cartOverlay.active');
+    const modalesActivos = document.querySelectorAll('.modal-overlay.active, #cartOverlay.active, #imageModal.active');
     if (modalesActivos.length === 0) {
         document.body.style.overflow = '';
     }
@@ -94,6 +100,40 @@ function formatearPrecio(precio) {
         maximumFractionDigits: 2
     });
 }
+
+// ============================================
+// MODAL DE IMAGEN
+// ============================================
+function abrirModalImagen(src) {
+    if (!imageModal || !imageModalImg) return;
+    imageModalImg.src = src;
+    imageModal.classList.add('active');
+    bloquearScroll();
+    // Forzar reflow para animación
+    void imageModal.offsetWidth;
+    imageModalImg.style.transform = 'scale(1)';
+    imageModalImg.style.opacity = '1';
+}
+
+function cerrarModalImagen() {
+    if (!imageModal) return;
+    imageModalImg.style.transform = 'scale(0.8)';
+    imageModalImg.style.opacity = '0';
+    setTimeout(() => {
+        imageModal.classList.remove('active');
+        imageModalImg.src = '';
+        desbloquearScroll();
+    }, 200);
+}
+
+// Cerrar con ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (imageModal && imageModal.classList.contains('active')) {
+            cerrarModalImagen();
+        }
+    }
+});
 
 // ============================================
 // MODAL DE ESPECIFICACIONES
@@ -484,6 +524,9 @@ function actualizarDatalists() {
     if (colorList) colorList.innerHTML = getColoresUnicos().map(c => `<option value="${c}">`).join('');
 }
 
+// ============================================
+// FILTROS (con filtro por color)
+// ============================================
 async function actualizarFiltros() {
     try {
         const res = await fetch('/api/productos/categorias');
@@ -494,10 +537,18 @@ async function actualizarFiltros() {
             const active = filtroCategoria === cat ? 'active' : '';
             html += `<button class="filter-btn ${active}" data-filter="${cat}">${cat}</button>`;
         });
+
+        // Agregar filtro por color si está activo
+        if (filtroColor) {
+            html += `<button class="filter-btn color-filter" onclick="limpiarFiltroColor()">Filtrando por: ${filtroColor} ✕</button>`;
+        }
+
         if (filterContainer) filterContainer.innerHTML = html;
-        document.querySelectorAll('.filter-btn').forEach(btn => {
+        document.querySelectorAll('.filter-btn:not(.color-filter)').forEach(btn => {
             btn.addEventListener('click', async function() {
                 filtroCategoria = this.dataset.filter;
+                // Limpiar filtro de color al cambiar categoría
+                filtroColor = null;
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
                 await cargarPagina(1);
@@ -508,18 +559,52 @@ async function actualizarFiltros() {
     }
 }
 
+// Función global para limpiar filtro de color
+window.limpiarFiltroColor = function() {
+    filtroColor = null;
+    cargarPagina(1);
+};
+
+// ============================================
+// CARGAR PÁGINA (con filtro por color)
+// ============================================
 async function cargarPagina(page) {
-    await cargarProductos(page, { category: filtroCategoria, visible: true });
-    renderizarCatalogo();
+    const filters = {
+        category: filtroCategoria,
+        visible: true
+    };
+    // Si hay filtro de color, lo pasamos al backend para filtrar
+    if (filtroColor) {
+        // Nota: El backend debería soportar filtro por color.
+        // Como no lo soporta, filtramos en el frontend (por simplicidad)
+        await cargarProductos(page, { category: filtroCategoria, visible: true });
+        // Aplicar filtro de color en frontend
+        if (filtroColor) {
+            productos = productos.filter(p => (p.colors || []).includes(filtroColor));
+            // Recalcular totalPages
+            totalPaginas = Math.ceil(productos.length / 20);
+        }
+        renderizarCatalogo();
+    } else {
+        await cargarProductos(page, { category: filtroCategoria, visible: true });
+        renderizarCatalogo();
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ============================================
-// RENDER CATÁLOGO
+// RENDER CATÁLOGO (con colores filtrables)
 // ============================================
 function renderizarCatalogo(conPaginacion = true) {
     if (!catalogContainer) return;
-    const visibles = productos.filter(p => p.visible !== false);
+
+    // Si hay filtro de color, filtrar productos
+    let productosMostrar = productos;
+    if (filtroColor) {
+        productosMostrar = productos.filter(p => (p.colors || []).includes(filtroColor));
+    }
+
+    const visibles = productosMostrar.filter(p => p.visible !== false);
     if (visibles.length === 0) {
         catalogContainer.innerHTML = `<p class="empty-msg">No hay productos disponibles.</p>`;
         return;
@@ -552,12 +637,18 @@ function renderizarCatalogo(conPaginacion = true) {
             });
             carouselHtml += `</div></div>`;
 
+            // Colores con funcionalidad de filtro
             let colorsHtml = '';
             if (colors.length) {
                 colorsHtml = `<div class="colors">`;
                 colors.forEach(color => {
                     const bgColor = CSS.supports('color', color) ? color : '#ccc';
-                    colorsHtml += `<span class="color-dot" style="background:${bgColor};" title="${color}"></span>`;
+                    const isActive = filtroColor === color ? 'active-color' : '';
+                    colorsHtml += `<span class="color-dot ${isActive}" 
+                                    style="background:${bgColor};" 
+                                    title="${color}" 
+                                    data-color="${color}"
+                                    onclick="filtrarPorColor('${color}')"></span>`;
                 });
                 colorsHtml += `</div>`;
             }
@@ -634,27 +725,32 @@ function renderizarCatalogo(conPaginacion = true) {
         });
     });
 
-    // 📸 AL HACER CLIC EN LA IMAGEN → SE ABRE EN NUEVA PESTAÑA
+    // Modal de imagen al hacer clic en la imagen
     document.querySelectorAll('.carousel .slides img').forEach(img => {
         img.style.cursor = 'zoom-in';
         img.addEventListener('click', function(e) {
             e.stopPropagation();
             e.preventDefault();
             if (this.src) {
-                // Abrir la imagen en una nueva pestaña
-                window.open(this.src, '_blank');
-            }
-        });
-        // Doble clic también abre en nueva pestaña (por si acaso)
-        img.addEventListener('dblclick', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (this.src) {
-                window.open(this.src, '_blank');
+                abrirModalImagen(this.src);
             }
         });
     });
 }
+
+// Función global para filtrar por color
+window.filtrarPorColor = function(color) {
+    if (filtroColor === color) {
+        filtroColor = null;
+    } else {
+        filtroColor = color;
+    }
+    // Actualizar UI de colores
+    document.querySelectorAll('.color-dot').forEach(dot => {
+        dot.classList.toggle('active-color', dot.dataset.color === filtroColor);
+    });
+    cargarPagina(1);
+};
 
 // ============================================
 // RENDER LISTA ADMIN
@@ -1083,6 +1179,16 @@ async function init() {
                 }
             });
         }
+    }
+
+    // Eventos modal de imagen
+    if (imageModalClose) imageModalClose.addEventListener('click', cerrarModalImagen);
+    if (imageModal) {
+        imageModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModalImagen();
+            }
+        });
     }
 
     // Admin eventos
