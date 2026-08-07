@@ -521,7 +521,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 0.2rem;  /* 🔹 ANTES: 1rem, AHORA: 0.2rem */
   opacity: 0;
   visibility: hidden;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -544,27 +544,44 @@ body {
   transform: scale(0.92) translateY(20px);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.modal-overlay.active .modal-card {
-  transform: scale(1) translateY(0);
+.image-modal .image-modal-content {
+  position: relative;
+  width: 100vw;   /* 🔹 ANTES: 98vw, AHORA: 100vw */
+  height: 100vh;  /* 🔹 ANTES: 98vh, AHORA: 100vh */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.modal-card.wide {
-  max-width: 650px;
+.image-modal .image-modal-content img {
+  max-width: 100%;   /* 🔹 ANTES: 98vw, AHORA: 100% */
+  max-height: 100%;  /* 🔹 ANTES: 95vh, AHORA: 100% */
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform: scale(0.9);
+  opacity: 0;
 }
-.modal-close {
+.image-modal.active .image-modal-content img {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.image-modal-close {
   position: absolute;
-  top: 0.8rem;
-  right: 1rem;
+  top: 10px;
+  right: 20px;
   background: none;
   border: none;
-  font-size: 1.8rem;
-  line-height: 1;
+  color: #fff;
+  font-size: 2.5rem;
   cursor: pointer;
-  color: #999;
-  padding: 0.2rem 0.4rem;
-  transition: color 0.2s, transform 0.2s;
+  padding: 0.5rem;
+  transition: transform 0.2s;
+  z-index: 10;
+  text-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
-.modal-close:hover {
-  color: var(--primary);
+.image-modal-close:hover {
   transform: rotate(90deg);
 }
 .modal-card h2 {
