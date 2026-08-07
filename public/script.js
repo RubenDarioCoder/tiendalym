@@ -14,7 +14,6 @@ let jwtToken = null;
 let tokenUrlValido = false;
 let editandoIndex = -1;
 let filtroCategoria = 'all';
-let filtroColor = null; // Nuevo: filtro por color
 let paginaActual = 1;
 let totalPaginas = 1;
 let currentImages = [];
@@ -102,7 +101,7 @@ function formatearPrecio(precio) {
 }
 
 // ============================================
-// MODAL DE IMAGEN
+// MODAL DE IMAGEN (más grande)
 // ============================================
 function abrirModalImagen(src) {
     if (!imageModal || !imageModalImg) return;
@@ -117,7 +116,7 @@ function abrirModalImagen(src) {
 
 function cerrarModalImagen() {
     if (!imageModal) return;
-    imageModalImg.style.transform = 'scale(0.8)';
+    imageModalImg.style.transform = 'scale(0.9)';
     imageModalImg.style.opacity = '0';
     setTimeout(() => {
         imageModal.classList.remove('active');
@@ -525,7 +524,7 @@ function actualizarDatalists() {
 }
 
 // ============================================
-// FILTROS (con filtro por color)
+// FILTROS (solo categorías)
 // ============================================
 async function actualizarFiltros() {
     try {
@@ -537,18 +536,10 @@ async function actualizarFiltros() {
             const active = filtroCategoria === cat ? 'active' : '';
             html += `<button class="filter-btn ${active}" data-filter="${cat}">${cat}</button>`;
         });
-
-        // Agregar filtro por color si está activo
-        if (filtroColor) {
-            html += `<button class="filter-btn color-filter" onclick="limpiarFiltroColor()">Filtrando por: ${filtroColor} ✕</button>`;
-        }
-
         if (filterContainer) filterContainer.innerHTML = html;
-        document.querySelectorAll('.filter-btn:not(.color-filter)').forEach(btn => {
+        document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', async function() {
                 filtroCategoria = this.dataset.filter;
-                // Limpiar filtro de color al cambiar categoría
-                filtroColor = null;
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
                 await cargarPagina(1);
@@ -559,52 +550,22 @@ async function actualizarFiltros() {
     }
 }
 
-// Función global para limpiar filtro de color
-window.limpiarFiltroColor = function() {
-    filtroColor = null;
-    cargarPagina(1);
-};
-
 // ============================================
-// CARGAR PÁGINA (con filtro por color)
+// CARGAR PÁGINA
 // ============================================
 async function cargarPagina(page) {
-    const filters = {
-        category: filtroCategoria,
-        visible: true
-    };
-    // Si hay filtro de color, lo pasamos al backend para filtrar
-    if (filtroColor) {
-        // Nota: El backend debería soportar filtro por color.
-        // Como no lo soporta, filtramos en el frontend (por simplicidad)
-        await cargarProductos(page, { category: filtroCategoria, visible: true });
-        // Aplicar filtro de color en frontend
-        if (filtroColor) {
-            productos = productos.filter(p => (p.colors || []).includes(filtroColor));
-            // Recalcular totalPages
-            totalPaginas = Math.ceil(productos.length / 20);
-        }
-        renderizarCatalogo();
-    } else {
-        await cargarProductos(page, { category: filtroCategoria, visible: true });
-        renderizarCatalogo();
-    }
+    await cargarProductos(page, { category: filtroCategoria, visible: true });
+    renderizarCatalogo();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ============================================
-// RENDER CATÁLOGO (con colores filtrables)
+// RENDER CATÁLOGO (sin colores)
 // ============================================
 function renderizarCatalogo(conPaginacion = true) {
     if (!catalogContainer) return;
 
-    // Si hay filtro de color, filtrar productos
-    let productosMostrar = productos;
-    if (filtroColor) {
-        productosMostrar = productos.filter(p => (p.colors || []).includes(filtroColor));
-    }
-
-    const visibles = productosMostrar.filter(p => p.visible !== false);
+    const visibles = productos.filter(p => p.visible !== false);
     if (visibles.length === 0) {
         catalogContainer.innerHTML = `<p class="empty-msg">No hay productos disponibles.</p>`;
         return;
@@ -622,7 +583,6 @@ function renderizarCatalogo(conPaginacion = true) {
         html += `<div class="category-section"><h2 class="category-title">${cat}</h2><div class="category-grid">`;
         items.forEach(prod => {
             const images = (prod.images && prod.images.length > 0) ? prod.images : ['https://picsum.photos/seed/default/400/400'];
-            const colors = (prod.colors || []).filter(c => c && c.trim().length > 0);
 
             let carouselHtml = `<div class="carousel" data-id="${prod.id}"><div class="slides" style="transform: translateX(0%);">`;
             images.forEach(img => {
@@ -637,22 +597,6 @@ function renderizarCatalogo(conPaginacion = true) {
             });
             carouselHtml += `</div></div>`;
 
-            // Colores con funcionalidad de filtro
-            let colorsHtml = '';
-            if (colors.length) {
-                colorsHtml = `<div class="colors">`;
-                colors.forEach(color => {
-                    const bgColor = CSS.supports('color', color) ? color : '#ccc';
-                    const isActive = filtroColor === color ? 'active-color' : '';
-                    colorsHtml += `<span class="color-dot ${isActive}" 
-                                    style="background:${bgColor};" 
-                                    title="${color}" 
-                                    data-color="${color}"
-                                    onclick="filtrarPorColor('${color}')"></span>`;
-                });
-                colorsHtml += `</div>`;
-            }
-
             const price = typeof prod.price === 'number' ? prod.price : parseFloat(prod.price) || 0;
 
             html += `
@@ -662,7 +606,6 @@ function renderizarCatalogo(conPaginacion = true) {
                         <span class="name">${prod.name}</span>
                         <span class="price">$${formatearPrecio(price)}</span>
                         <span class="desc">${prod.description || ''}</span>
-                        ${colorsHtml}
                         <button class="btn-add-cart" data-id="${prod.id}">🛒 Agregar al carrito</button>
                     </div>
                 </div>
@@ -738,22 +681,8 @@ function renderizarCatalogo(conPaginacion = true) {
     });
 }
 
-// Función global para filtrar por color
-window.filtrarPorColor = function(color) {
-    if (filtroColor === color) {
-        filtroColor = null;
-    } else {
-        filtroColor = color;
-    }
-    // Actualizar UI de colores
-    document.querySelectorAll('.color-dot').forEach(dot => {
-        dot.classList.toggle('active-color', dot.dataset.color === filtroColor);
-    });
-    cargarPagina(1);
-};
-
 // ============================================
-// RENDER LISTA ADMIN
+// RENDER LISTA ADMIN (con colores como tags)
 // ============================================
 function renderizarListaAdmin() {
     if (!adminProductList) return;
