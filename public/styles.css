@@ -981,6 +981,14 @@ hr {
   transform: rotate(90deg);
 }
 
+.brand-logo {
+  height: 30px;
+  width: auto;
+  vertical-align: middle;
+  margin-right: 8px;
+  border-radius: 4px;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (min-width: 600px) {
   .category-grid {
