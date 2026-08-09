@@ -807,7 +807,7 @@ async function guardarProductoHandler(e) {
 
     const resultado = await guardarProductoAPI(producto, idx);
     if (resultado) {
-        await cargarProductos(paginaActual, { category: filtroCategoria, visible: true });
+        await cargarProductos(paginaActual, { category: filtroCategoria });
         actualizarFiltros();
         renderizarCatalogo();
         renderizarListaAdmin();
@@ -824,7 +824,7 @@ async function eliminarProducto(index) {
         const prod = productos[index];
         const eliminado = await eliminarProductoAPI(prod.id, index);
         if (eliminado) {
-            await cargarProductos(paginaActual, { category: filtroCategoria, visible: true });
+            await cargarProductos(paginaActual, { category: filtroCategoria });
             actualizarFiltros();
             renderizarCatalogo();
             renderizarListaAdmin();
@@ -842,10 +842,11 @@ async function toggleVisibilidad(index) {
         prod.visible = prod.visible === false ? true : false;
         const resultado = await guardarProductoAPI(prod, index);
         if (resultado) {
-            await cargarProductos(paginaActual, { category: filtroCategoria, visible: true });
+            // Recargar TODOS los productos (sin filtrar por visible)
+            await cargarProductos(paginaActual, { category: filtroCategoria });
             actualizarFiltros();
-            renderizarCatalogo();
-            renderizarListaAdmin();
+            renderizarCatalogo(); // para el público (filtra internamente)
+            renderizarListaAdmin(); // muestra todos (visibles y ocultos)
         }
     } catch (error) {
         console.error('Error al cambiar visibilidad:', error);
